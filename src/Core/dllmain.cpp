@@ -25,6 +25,8 @@
 #include "Stages/StageTable.h"
 #include "Stages/StagesModule.h"
 #include "Training/TrainingModule.h"
+#include "Web/UpdateCheck.h"
+#include "Web/UpdateInstall.h"
 
 #include <windows.h>
 
@@ -146,6 +148,12 @@ void Stage_FileOverrides()
 	ModFiles::Initialize();
 }
 
+void Stage_UpdateCheck()
+{
+	DeviceHooks::AddListener(UpdateInstall::Listener());
+	UpdateCheck::Start();
+}
+
 void Stage_Overlay()
 {
 	ProcessTuning::Initialize();
@@ -183,6 +191,7 @@ void Install()
 	RunStage("hidden characters", HiddenCharacters::Install);
 	RunStage("save data guard", SaveDataGuard::Install);
 	RunStage("game restart", GameRestart::Install);
+	RunStage("update check", Stage_UpdateCheck);
 	RunStage("overlay", Stage_Overlay);
 
 	HookManager::EnableAllHooks();

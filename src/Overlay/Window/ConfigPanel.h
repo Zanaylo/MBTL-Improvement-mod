@@ -10,6 +10,7 @@ public:
 
 private:
 	void DrawGeneralTab();
+	void DrawUpdateOptions();
 	void DrawOverlayOptions();
 	void DrawStepOptions();
 	void DrawRosterOptions();

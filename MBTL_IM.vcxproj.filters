@@ -79,6 +79,9 @@
     <Filter Include="Training">
       <UniqueIdentifier>{e0ad314c-b345-1fb7-a5ed-68bb70aa22ab}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Web">
+      <UniqueIdentifier>{5ea0e119-4872-1ef1-f5cb-85505db1a525}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Core\AsyncFileDialog.cpp">
@@ -575,6 +578,27 @@
     </ClCompile>
     <ClCompile Include="src\Stages\CharacterLight.cpp">
       <Filter>Stages</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Core\Json.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Web\Http.cpp">
+      <Filter>Web</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Web\Job.cpp">
+      <Filter>Web</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Web\GitHubRelease.cpp">
+      <Filter>Web</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Web\UpdateCheck.cpp">
+      <Filter>Web</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Web\UpdateInstall.cpp">
+      <Filter>Web</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Overlay\Window\UpdateNotifierWindow.cpp">
+      <Filter>Overlay\Window</Filter>
     </ClCompile>
     <ClCompile Include="depends\imgui\imgui.cpp">
       <Filter>Dependencies\ImGui</Filter>
@@ -1156,6 +1180,27 @@
     </ClInclude>
     <ClInclude Include="src\Stages\CharacterLight.h">
       <Filter>Stages</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Core\Json.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Web\Http.h">
+      <Filter>Web</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Web\Job.h">
+      <Filter>Web</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Web\GitHubRelease.h">
+      <Filter>Web</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Web\UpdateCheck.h">
+      <Filter>Web</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Web\UpdateInstall.h">
+      <Filter>Web</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Overlay\Window\UpdateNotifierWindow.h">
+      <Filter>Overlay\Window</Filter>
     </ClInclude>
     <ClInclude Include="depends\imgui\imconfig.h">
       <Filter>Dependencies\ImGui</Filter>

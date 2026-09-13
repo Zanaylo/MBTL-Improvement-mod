@@ -10,6 +10,7 @@
 #include "Overlay/HotkeyActions.h"
 #include "Overlay/NotificationBar.h"
 #include "Overlay/OverlayFont.h"
+#include "Web/UpdateCheck.h"
 
 #include <backends/imgui_impl_dx9.h>
 #include <backends/imgui_impl_win32.h>
@@ -413,6 +414,7 @@ void WindowManager::Render()
 	}
 
 	PollInput();
+	AnnounceUpdate();
 
 	m_overlayActive = m_container->AnyWindowOpen();
 	m_interactive = m_container->AnyInteractiveWindowOpen();
@@ -446,4 +448,24 @@ void WindowManager::Render()
 
 	ImGui_ImplDX9_RenderDrawData(ImGui::GetDrawData());
 	m_device->EndScene();
+}
+
+void WindowManager::OpenUpdateNotifier()
+{
+	if (m_container == nullptr)
+		return;
+
+	IWindow* const window = m_container->GetWindow(WindowType_UpdateNotifier);
+
+	if (window != nullptr)
+		window->Open();
+}
+
+void WindowManager::AnnounceUpdate()
+{
+	if (m_updateAnnounced || !UpdateCheck::HasNewer())
+		return;
+
+	m_updateAnnounced = true;
+	OpenUpdateNotifier();
 }

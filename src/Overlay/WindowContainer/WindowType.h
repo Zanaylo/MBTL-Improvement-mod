@@ -11,5 +11,6 @@ enum WindowType
 	WindowType_Debug,
 	WindowType_FrameMeterLegend,
 	WindowType_Palette,
+	WindowType_UpdateNotifier,
 	WindowType_COUNT
 };

@@ -25,6 +25,8 @@ public:
 
 	WindowContainer* GetContainer() { return m_container.get(); }
 
+	void OpenUpdateNotifier();
+
 	LRESULT HandleWindowMessage(HWND window, UINT message, WPARAM wParam, LPARAM lParam, bool& outHandled);
 
 private:
@@ -43,8 +45,10 @@ private:
 	void ObserveFocus(UINT message, WPARAM wParam);
 	void InstallWindowProc(HWND window);
 	void RemoveWindowProc();
+	void AnnounceUpdate();
 
 	bool m_initialized = false;
+	bool m_updateAnnounced = false;
 	bool m_deviceObjectsValid = false;
 	bool m_overlayActive = false;
 	bool m_interactive = false;

@@ -10,6 +10,7 @@
 #include "Overlay/Window/PaletteWindow.h"
 #include "Overlay/Window/PerformanceWindow.h"
 #include "Overlay/Window/StagesWindow.h"
+#include "Overlay/Window/UpdateNotifierWindow.h"
 
 namespace {
 
@@ -31,6 +32,7 @@ WindowContainer::WindowContainer()
 	m_windows[WindowType_Debug] = std::make_unique<DebugWindow>("Debug", true);
 	m_windows[WindowType_FrameMeterLegend] = std::make_unique<FrameMeterLegendWindow>("Frame meter information", true);
 	m_windows[WindowType_Palette] = std::make_unique<PaletteWindow>("Palette editor", true);
+	m_windows[WindowType_UpdateNotifier] = std::make_unique<UpdateNotifierWindow>("Update available", true);
 }
 
 void WindowContainer::UpdateAll()

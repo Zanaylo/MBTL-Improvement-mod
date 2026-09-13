@@ -9,3 +9,4 @@
 | `ModFiles` | `LogServedFiles` | `1` | Log every file served from Mods |
 | `ModFiles` | `LogMissingFiles` | `1` | Log files the game asked for in a modded folder that Mods does not have |
 | `Mod` | `DinputDllWrapper` | empty | Another `dinput8.dll` to chain to instead of the Windows one |
+| `Mod` | `CheckForUpdates` | `1` | Ask GitHub once at start whether a newer release is out |

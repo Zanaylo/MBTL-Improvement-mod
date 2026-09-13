@@ -14,8 +14,9 @@ A mod for MELTY BLOOD: TYPE LUMINA with an in-game window, built on the same des
 
 ## Install
 
-1. Copy `dinput8.dll` and the `MBTL-IM` folder next to `MBTL.exe`.
-2. Start the game and press F1.
+1. Extract the release zip next to `MBTL.exe`. `dinput8.dll` is the mod, `MBTLIMUpdater.exe` installs later
+   versions.
+2. Start the game and press F1. A newer release announces itself in game, with an **Update now** button.
 
 On Linux/Proton, add `WINEDLLOVERRIDES="dinput8=n,b" %command%` to the launch options, or rename
 `dinput8.dll` to `d3d9.dll`.

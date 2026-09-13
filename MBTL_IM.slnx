@@ -3,4 +3,5 @@
     <Platform Name="Win32" />
   </Configurations>
   <Project Path="MBTL_IM.vcxproj" Id="3d7a2c51-8e4b-4f19-b6a0-5c2e9d1f7a84" />
+  <Project Path="MBTLIMUpdater.vcxproj" Id="6a1d9c3e-4b7f-4e25-8d90-2f6c1b8e5a37" />
 </Solution>

@@ -8,6 +8,9 @@
 #include "Game/HiddenCharacters.h"
 #include "Overlay/UiScale.h"
 #include "Overlay/UiText.h"
+#include "Overlay/WindowManager.h"
+#include "Web/UpdateCheck.h"
+#include "Web/UpdateInstall.h"
 
 #include <imgui.h>
 
@@ -68,6 +71,7 @@ void ConfigPanel::DrawGeneralTab()
 	ImGui::Text("%s %s", MBTL_IM_NAME, MBTL_IM_VERSION);
 	ImGui::Text("%.1f FPS", ImGui::GetIO().Framerate);
 
+	DrawUpdateOptions();
 	DrawOverlayOptions();
 	DrawStepOptions();
 	DrawRosterOptions();
@@ -79,6 +83,34 @@ void ConfigPanel::DrawGeneralTab()
 		"LogMissingFiles");
 
 	UiText::Muted("Saved to %s as soon as something changes.", Settings::IniPath().c_str());
+}
+
+void ConfigPanel::DrawUpdateOptions()
+{
+	ImGui::SeparatorText("Updates");
+
+	SaveBoolOnChange("Check for updates on start", g_settings.checkForUpdates, "Mod", "CheckForUpdates");
+
+	if (ImGui::IsItemHovered())
+		ImGui::SetTooltip("Asks GitHub once, on a thread of its own, whether a newer release exists. Nothing is "
+			"downloaded until you ask for it.");
+
+	ImGui::BeginDisabled(UpdateCheck::IsChecking() || UpdateInstall::IsBusy());
+
+	if (ImGui::Button("Check now"))
+		UpdateCheck::Refresh();
+
+	ImGui::EndDisabled();
+
+	if (UpdateCheck::HasNewer())
+	{
+		ImGui::SameLine();
+
+		if (ImGui::Button("Show the update"))
+			WindowManager::GetInstance().OpenUpdateNotifier();
+	}
+
+	UiText::Muted("%s", UpdateCheck::GetStatusText());
 }
 
 void ConfigPanel::DrawOverlayOptions()

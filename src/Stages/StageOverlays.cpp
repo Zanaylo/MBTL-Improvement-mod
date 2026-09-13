@@ -639,6 +639,56 @@ public:
 	}
 };
 
+struct ExportedFile
+{
+	const char* key;
+	const char* path;
+};
+
+constexpr ExportedFile kExportedFiles[] = {
+	{ kListKey, "Mods\\bg\\BgList.txt" },
+	{ kNamesKey, "Mods\\bg\\BgList_str.ini" },
+};
+
+constexpr const char* kExportFolder = "Mods\\bg";
+
+const ExportedFile* ExportFor(const std::string& key)
+{
+	for (const ExportedFile& file : kExportedFiles)
+	{
+		if (key == file.key)
+			return &file;
+	}
+
+	return nullptr;
+}
+
+class StageTextExport : public IFileOverlay
+{
+public:
+	bool Covers(const std::string& key) const override { return ExportFor(key) != nullptr; }
+	uint32_t Version() const override { return 1; }
+
+	bool Apply(const std::string& key, std::vector<uint8_t>& content) const override
+	{
+		const ExportedFile* const file = ExportFor(key);
+		const std::string path = file != nullptr ? GetModRootPath(file->path) : std::string();
+
+		if (content.empty() || path.empty() || GetFileAttributesA(path.c_str()) != INVALID_FILE_ATTRIBUTES)
+			return false;
+
+		if (!CreateDirectoryTree(GetModRootPath(kExportFolder)) || !WriteWholeFile(path, content.data(), content.size()))
+		{
+			LOG("StageOverlays: the game's own %s could not be written to %s", key.c_str(), path.c_str());
+			return false;
+		}
+
+		LOG("StageOverlays: the game's own %s was written to %s", key.c_str(), path.c_str());
+		return false;
+	}
+};
+
+StageTextExport g_exportOverlay;
 BgListOverlay g_listOverlay;
 BgNamesOverlay g_namesOverlay;
 StageMusicOverlay g_musicOverlay;
@@ -650,6 +700,7 @@ StageLightingOverlay g_lightingOverlay;
 
 void StageOverlays::Register()
 {
+	ModFiles::AddOverlay(&g_exportOverlay);
 	ModFiles::AddOverlay(&g_listOverlay);
 	ModFiles::AddOverlay(&g_namesOverlay);
 	ModFiles::AddOverlay(&g_musicOverlay);

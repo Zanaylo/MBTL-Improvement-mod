@@ -2,6 +2,7 @@
 
 #include "Core/TextEncoding.h"
 #include "Stages/BgListText.h"
+#include "Stages/FbGameFolder.h"
 #include "Stages/StageArchive.h"
 
 #include <algorithm>
@@ -12,6 +13,7 @@ namespace {
 
 constexpr size_t kNameBytes = 62;
 constexpr const char* kZero = "0.0";
+constexpr const char* kFogOff = "0";
 
 const char* const kTakenFields[] = {
 	"Scale", "Position", "FOV", "VanishingPoint", "IsFog", "FogStart", "FogEnd", "FogColor", "MSAA",
@@ -59,6 +61,13 @@ std::string Retagged(const std::string& templateBlock, int number)
 	return tag + templateBlock.substr(digits);
 }
 
+bool FromGame(const std::string& source, FbGameFolder::Game game)
+{
+	std::string from;
+
+	return StageArchive::Field(source, "From", from) && StageArchive::Unquoted(from) == FbGameFolder::Name(game);
+}
+
 }
 
 std::string StageEntry::Compose(const std::string& templateBlock, const std::string& source, int number,
@@ -76,6 +85,9 @@ std::string StageEntry::Compose(const std::string& templateBlock, const std::str
 		BgListText::SetValue(block, "StageSelTex", std::to_string(card));
 
 	TakeFields(block, source);
+
+	if (FromGame(source, FbGameFolder::Game_DFCI))
+		BgListText::SetValue(block, "IsFog", kFogOff);
 
 	for (const char* key : kZeroedFields)
 		BgListText::SetValue(block, key, kZero);

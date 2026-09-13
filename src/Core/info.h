@@ -5,7 +5,7 @@
 #define MBTL_IM_VERSION_MINOR 3
 #define MBTL_IM_VERSION_PATCH 0
 
-#define MBTL_IM_VERSION "0.3.0"
+#define MBTL_IM_VERSION "0.3.1"
 
 #define MBTL_IM_USER_AGENT "MBTL-Improvement-Mod/" MBTL_IM_VERSION
 

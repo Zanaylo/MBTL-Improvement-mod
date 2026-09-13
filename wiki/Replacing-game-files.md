@@ -10,6 +10,10 @@ Put a file under `MBTL-IM\Mods` at the same path it has inside the game's archiv
 | `bg\bg65535\stage_color.img` | character select lighting |
 | `Bgm\bgm.txt` | the music table |
 
+The first time the game reads its stage list, the mod writes the game's own `bg\BgList.txt` and
+`bg\BgList_str.ini` into `MBTL-IM\Mods\bg` as plain text, so there is a readable copy to start from. From then on
+those copies are the stage list. After a game update, delete them and start the game once to get fresh ones.
+
 ## Rules
 
 - Files are plain, unencrypted files, the same thing an unpacker writes out.

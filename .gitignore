@@ -1,0 +1,12 @@
+bin/
+build/
+export/
+.vs/
+*.user
+*.aps
+*.log
+*.obj
+*.pdb
+*.ilk
+__pycache__/
+tools/

@@ -1,0 +1,741 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>18.0</VCProjectVersion>
+    <ProjectGuid>{3D7A2C51-8E4B-4F19-B6A0-5C2E9D1F7A84}</ProjectGuid>
+    <RootNamespace>MBTL_IM</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Toolset">
+    <PlatformToolset Condition="'$(PlatformToolset)'==''">v145</PlatformToolset>
+  </PropertyGroup>
+
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+
+  <PropertyGroup Condition="'$(Configuration)'=='Debug'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)'=='Release'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings" />
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+
+  <PropertyGroup>
+    <TargetName>dinput8</TargetName>
+    <OutDir>$(SolutionDir)bin\$(Configuration)\</OutDir>
+    <IntDir>$(SolutionDir)build\$(Configuration)\</IntDir>
+    <IncludePath>$(ProjectDir)src;$(ProjectDir)depends\imgui;$(ProjectDir)depends\imgui\backends;$(ProjectDir)depends\minhook\include;$(IncludePath)</IncludePath>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Debugging">
+    <GameDir Condition="'$(GameDir)'==''">D:\Jogos\steam\steamapps\common\MELTY BLOOD TYPE LUMINA\</GameDir>
+    <SteamAppId Condition="'$(SteamAppId)'==''">1372280</SteamAppId>
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+    <LocalDebuggerCommand>$(GameDir)MBTL.exe</LocalDebuggerCommand>
+    <LocalDebuggerWorkingDirectory>$(GameDir)</LocalDebuggerWorkingDirectory>
+    <LocalDebuggerDebuggerType>NativeOnly</LocalDebuggerDebuggerType>
+    <LocalDebuggerAttach>false</LocalDebuggerAttach>
+  </PropertyGroup>
+
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;IMGUI_DISABLE_OBSOLETE_FUNCTIONS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <ModuleDefinitionFile>resource\dinput8.def</ModuleDefinitionFile>
+      <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
+      <AdditionalDependencies>d3d9.lib;dbghelp.lib;winmm.lib;version.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
+    <ClCompile>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <Optimization>Disabled</Optimization>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='Release'">
+    <ClCompile>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+    </ClCompile>
+    <Link>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+
+  <ItemDefinitionGroup Condition="'$(EnableLogging)'=='true'">
+    <ClCompile>
+      <PreprocessorDefinitions>FORCE_LOGGING;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+
+  <ItemGroup>
+    <ClCompile Include="src\Core\AsyncFileDialog.cpp" />
+    <ClCompile Include="src\Core\crashdump.cpp" />
+    <ClCompile Include="src\Core\Deflate.cpp" />
+    <ClCompile Include="src\Core\dllmain.cpp" />
+    <ClCompile Include="src\Core\FileIndex.cpp" />
+    <ClCompile Include="src\Core\Hotkeys.cpp" />
+    <ClCompile Include="src\Core\interfaces.cpp" />
+    <ClCompile Include="src\Core\KeyBind.cpp" />
+    <ClCompile Include="src\Core\KeyboardCapture.cpp" />
+    <ClCompile Include="src\Core\keycodes.cpp" />
+    <ClCompile Include="src\Core\KeyState.cpp" />
+    <ClCompile Include="src\Core\logger.cpp" />
+    <ClCompile Include="src\Core\ProcessTuning.cpp" />
+    <ClCompile Include="src\Core\Profiler.cpp" />
+    <ClCompile Include="src\Core\Settings.cpp" />
+    <ClCompile Include="src\Core\TextEncoding.cpp" />
+    <ClCompile Include="src\Core\utils.cpp" />
+    <ClCompile Include="src\Core\ZipArchive.cpp" />
+    <ClCompile Include="src\D3D9\D3D9Hooks.cpp" />
+    <ClCompile Include="src\D3D9\D3D9Proxy.cpp" />
+    <ClCompile Include="src\D3D9\DeviceHooks.cpp" />
+    <ClCompile Include="src\D3D9\FrozenFrame.cpp" />
+    <ClCompile Include="src\D3D9\PresentTuning.cpp" />
+    <ClCompile Include="src\Game\Anchors.cpp" />
+    <ClCompile Include="src\Game\FileCache.cpp" />
+    <ClCompile Include="src\Game\MemoryMap.cpp" />
+    <ClCompile Include="src\Game\ModFiles.cpp" />
+    <ClCompile Include="src\Game\ModPacks.cpp" />
+    <ClCompile Include="src\Hooks\HookManager.cpp" />
+    <ClCompile Include="src\Hooks\ImageScanner.cpp" />
+    <ClCompile Include="src\Music\BgmCatalog.cpp" />
+    <ClCompile Include="src\Music\BgmControl.cpp" />
+    <ClCompile Include="src\Music\BgmNames.cpp" />
+    <ClCompile Include="src\Music\BgmRules.cpp" />
+    <ClCompile Include="src\Music\BgmShuffle.cpp" />
+    <ClCompile Include="src\Music\BgmTable.cpp" />
+    <ClCompile Include="src\Music\BgmTextOverlay.cpp" />
+    <ClCompile Include="src\Music\BgmVolume.cpp" />
+    <ClCompile Include="src\Music\MusicAnchors.cpp" />
+    <ClCompile Include="src\Music\MusicDebugSection.cpp" />
+    <ClCompile Include="src\Music\MusicIni.cpp" />
+    <ClCompile Include="src\Music\MusicModule.cpp" />
+    <ClCompile Include="src\Music\UserTracks.cpp" />
+    <ClCompile Include="src\Overlay\ComboNav.cpp" />
+    <ClCompile Include="src\Overlay\Debug\CoreDebugSections.cpp" />
+    <ClCompile Include="src\Overlay\Debug\DebugSection.cpp" />
+    <ClCompile Include="src\Overlay\HotkeyActions.cpp" />
+    <ClCompile Include="src\Overlay\NotificationBar.cpp" />
+    <ClCompile Include="src\Overlay\OverlayFont.cpp" />
+    <ClCompile Include="src\Overlay\UiScale.cpp" />
+    <ClCompile Include="src\Overlay\UiText.cpp" />
+    <ClCompile Include="src\Overlay\Window\ConfigPanel.cpp" />
+    <ClCompile Include="src\Overlay\Window\DebugWindow.cpp" />
+    <ClCompile Include="src\Overlay\Window\HitboxOverlay.cpp" />
+    <ClCompile Include="src\Overlay\Window\IWindow.cpp" />
+    <ClCompile Include="src\Overlay\Window\MainWindow.cpp" />
+    <ClCompile Include="src\Overlay\Window\ModsPanel.cpp" />
+    <ClCompile Include="src\Overlay\Window\ModsWindow.cpp" />
+    <ClCompile Include="src\Overlay\Window\MusicPanel.cpp" />
+    <ClCompile Include="src\Overlay\Window\MusicWindow.cpp" />
+    <ClCompile Include="src\Overlay\Window\PerformanceWindow.cpp" />
+    <ClCompile Include="src\Overlay\Window\StagesPanel.cpp" />
+    <ClCompile Include="src\Overlay\Window\StagesWindow.cpp" />
+    <ClCompile Include="src\Overlay\WindowContainer\WindowContainer.cpp" />
+    <ClCompile Include="src\Overlay\WindowManager.cpp" />
+    <ClCompile Include="src\Stages\BgListText.cpp" />
+    <ClCompile Include="src\Stages\BgObjectFix.cpp" />
+    <ClCompile Include="src\Stages\FbGameFolder.cpp" />
+    <ClCompile Include="src\Stages\FbxAscii.cpp" />
+    <ClCompile Include="src\Stages\FbxExLocal.cpp" />
+    <ClCompile Include="src\Stages\FbxExWriter.cpp" />
+    <ClCompile Include="src\Stages\FbxToFbxEx.cpp" />
+    <ClCompile Include="src\Stages\GameArchive.cpp" />
+    <ClCompile Include="src\Stages\GameStages.cpp" />
+    <ClCompile Include="src\Stages\HiddenStages.cpp" />
+    <ClCompile Include="src\Stages\MbtlCipher.cpp" />
+    <ClCompile Include="src\Stages\StageArchive.cpp" />
+    <ClCompile Include="src\Stages\StageEntry.cpp" />
+    <ClCompile Include="src\Stages\StageImport.cpp" />
+    <ClCompile Include="src\Stages\StageLibrary.cpp" />
+    <ClCompile Include="src\Stages\StageNames.cpp" />
+    <ClCompile Include="src\Stages\StageOverlays.cpp" />
+    <ClCompile Include="src\Stages\StagePicker.cpp" />
+    <ClCompile Include="src\Stages\StageRevision.cpp" />
+    <ClCompile Include="src\Stages\StagesDebugSection.cpp" />
+    <ClCompile Include="src\Stages\StagesModule.cpp" />
+    <ClCompile Include="src\Stages\StageTable.cpp" />
+    <ClCompile Include="src\Stages\UnielCipher.cpp" />
+    <ClCompile Include="src\Training\BattleMap.cpp" />
+    <ClCompile Include="src\Training\Camera.cpp" />
+    <ClCompile Include="src\Training\FrameStepper.cpp" />
+    <ClCompile Include="src\Training\FrozenFrameListener.cpp" />
+    <ClCompile Include="src\Training\GameState.cpp" />
+    <ClCompile Include="src\Training\HitboxData.cpp" />
+    <ClCompile Include="src\Training\TrainingDebugSection.cpp" />
+    <ClCompile Include="src\Training\TrainingModule.cpp" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ClInclude Include="src\Core\AsyncFileDialog.h" />
+    <ClInclude Include="src\Core\crashdump.h" />
+    <ClInclude Include="src\Core\Deflate.h" />
+    <ClInclude Include="src\Core\FileIndex.h" />
+    <ClInclude Include="src\Core\Hotkeys.h" />
+    <ClInclude Include="src\Core\info.h" />
+    <ClInclude Include="src\Core\interfaces.h" />
+    <ClInclude Include="src\Core\KeyBind.h" />
+    <ClInclude Include="src\Core\KeyboardCapture.h" />
+    <ClInclude Include="src\Core\keycodes.h" />
+    <ClInclude Include="src\Core\KeyState.h" />
+    <ClInclude Include="src\Core\logger.h" />
+    <ClInclude Include="src\Core\ProcessTuning.h" />
+    <ClInclude Include="src\Core\Profiler.h" />
+    <ClInclude Include="src\Core\settings.def" />
+    <ClInclude Include="src\Core\Settings.h" />
+    <ClInclude Include="src\Core\TextEncoding.h" />
+    <ClInclude Include="src\Core\utils.h" />
+    <ClInclude Include="src\Core\ZipArchive.h" />
+    <ClInclude Include="src\D3D9\D3D9Hooks.h" />
+    <ClInclude Include="src\D3D9\D3D9Proxy.h" />
+    <ClInclude Include="src\D3D9\DeviceHooks.h" />
+    <ClInclude Include="src\D3D9\DeviceListener.h" />
+    <ClInclude Include="src\D3D9\FrozenFrame.h" />
+    <ClInclude Include="src\D3D9\PresentTuning.h" />
+    <ClInclude Include="src\Game\Anchors.h" />
+    <ClInclude Include="src\Game\FileCache.h" />
+    <ClInclude Include="src\Game\FileOverlay.h" />
+    <ClInclude Include="src\Game\GameOffsets.h" />
+    <ClInclude Include="src\Game\MemoryMap.h" />
+    <ClInclude Include="src\Game\ModFiles.h" />
+    <ClInclude Include="src\Game\ModPacks.h" />
+    <ClInclude Include="src\Hooks\HookManager.h" />
+    <ClInclude Include="src\Hooks\ImageScanner.h" />
+    <ClInclude Include="src\Music\BgmCatalog.h" />
+    <ClInclude Include="src\Music\BgmControl.h" />
+    <ClInclude Include="src\Music\BgmNames.h" />
+    <ClInclude Include="src\Music\BgmRules.h" />
+    <ClInclude Include="src\Music\BgmShuffle.h" />
+    <ClInclude Include="src\Music\BgmTable.h" />
+    <ClInclude Include="src\Music\BgmTextOverlay.h" />
+    <ClInclude Include="src\Music\BgmVolume.h" />
+    <ClInclude Include="src\Music\MusicAnchors.h" />
+    <ClInclude Include="src\Music\MusicDebugSection.h" />
+    <ClInclude Include="src\Music\MusicIni.h" />
+    <ClInclude Include="src\Music\MusicModule.h" />
+    <ClInclude Include="src\Music\UserTracks.h" />
+    <ClInclude Include="src\Overlay\ComboNav.h" />
+    <ClInclude Include="src\Overlay\Debug\CoreDebugSections.h" />
+    <ClInclude Include="src\Overlay\Debug\DebugSection.h" />
+    <ClInclude Include="src\Overlay\HotkeyActions.h" />
+    <ClInclude Include="src\Overlay\NotificationBar.h" />
+    <ClInclude Include="src\Overlay\OverlayFont.h" />
+    <ClInclude Include="src\Overlay\UiScale.h" />
+    <ClInclude Include="src\Overlay\UiText.h" />
+    <ClInclude Include="src\Overlay\Window\ConfigPanel.h" />
+    <ClInclude Include="src\Overlay\Window\DebugWindow.h" />
+    <ClInclude Include="src\Overlay\Window\HitboxOverlay.h" />
+    <ClInclude Include="src\Overlay\Window\IWindow.h" />
+    <ClInclude Include="src\Overlay\Window\MainWindow.h" />
+    <ClInclude Include="src\Overlay\Window\ModsPanel.h" />
+    <ClInclude Include="src\Overlay\Window\ModsWindow.h" />
+    <ClInclude Include="src\Overlay\Window\MusicPanel.h" />
+    <ClInclude Include="src\Overlay\Window\MusicWindow.h" />
+    <ClInclude Include="src\Overlay\Window\PerformanceWindow.h" />
+    <ClInclude Include="src\Overlay\Window\StagesPanel.h" />
+    <ClInclude Include="src\Overlay\Window\StagesWindow.h" />
+    <ClInclude Include="src\Overlay\WindowContainer\WindowContainer.h" />
+    <ClInclude Include="src\Overlay\WindowContainer\WindowType.h" />
+    <ClInclude Include="src\Overlay\WindowManager.h" />
+    <ClInclude Include="src\Stages\BgListText.h" />
+    <ClInclude Include="src\Stages\BgObjectFix.h" />
+    <ClInclude Include="src\Stages\FbGameFolder.h" />
+    <ClInclude Include="src\Stages\FbxAscii.h" />
+    <ClInclude Include="src\Stages\FbxExLocal.h" />
+    <ClInclude Include="src\Stages\FbxExWriter.h" />
+    <ClInclude Include="src\Stages\FbxToFbxEx.h" />
+    <ClInclude Include="src\Stages\GameArchive.h" />
+    <ClInclude Include="src\Stages\GameStages.h" />
+    <ClInclude Include="src\Stages\HiddenStages.h" />
+    <ClInclude Include="src\Stages\MbtlCipher.h" />
+    <ClInclude Include="src\Stages\MbtlKey.inc" />
+    <ClInclude Include="src\Stages\StageArchive.h" />
+    <ClInclude Include="src\Stages\StageEntry.h" />
+    <ClInclude Include="src\Stages\StageImport.h" />
+    <ClInclude Include="src\Stages\StageLibrary.h" />
+    <ClInclude Include="src\Stages\StageNames.h" />
+    <ClInclude Include="src\Stages\StageOverlays.h" />
+    <ClInclude Include="src\Stages\StagePicker.h" />
+    <ClInclude Include="src\Stages\StageRevision.h" />
+    <ClInclude Include="src\Stages\StagesDebugSection.h" />
+    <ClInclude Include="src\Stages\StagesModule.h" />
+    <ClInclude Include="src\Stages\StageTable.h" />
+    <ClInclude Include="src\Stages\UnielCipher.h" />
+    <ClInclude Include="src\Training\BattleMap.h" />
+    <ClInclude Include="src\Training\Camera.h" />
+    <ClInclude Include="src\Training\FrameStepper.h" />
+    <ClInclude Include="src\Training\FrozenFrameListener.h" />
+    <ClInclude Include="src\Training\GameState.h" />
+    <ClInclude Include="src\Training\HitboxData.h" />
+    <ClInclude Include="src\Training\TrainingDebugSection.h" />
+    <ClInclude Include="src\Training\TrainingModule.h" />
+  </ItemGroup>
+
+  <ItemGroup Label="Dependencies">
+    <ClCompile Include="depends\minhook\src\buffer.c" />
+    <ClCompile Include="depends\minhook\src\hook.c" />
+    <ClCompile Include="depends\minhook\src\trampoline.c" />
+    <ClCompile Include="depends\minhook\src\hde\hde32.c" />
+    <ClCompile Include="depends\minhook\src\hde\hde64.c" />
+    <ClInclude Include="depends\minhook\include\MinHook.h" />
+    <ClInclude Include="depends\minhook\src\buffer.h" />
+    <ClInclude Include="depends\minhook\src\trampoline.h" />
+    <ClInclude Include="depends\minhook\src\hde\hde32.h" />
+    <ClInclude Include="depends\minhook\src\hde\hde64.h" />
+    <ClInclude Include="depends\minhook\src\hde\pstdint.h" />
+    <ClInclude Include="depends\minhook\src\hde\table32.h" />
+    <ClInclude Include="depends\minhook\src\hde\table64.h" />
+    <ClCompile Include="src\Core\Compat.cpp" />
+    <ClInclude Include="src\Core\Compat.h" />
+    <ClCompile Include="src\D3D9\DdsTexture.cpp" />
+    <ClInclude Include="src\D3D9\DdsTexture.h" />
+    <ClInclude Include="src\D3D9\DrawFilter.h" />
+    <ClCompile Include="src\D3D9\GraphicsWrapper.cpp" />
+    <ClInclude Include="src\D3D9\GraphicsWrapper.h" />
+    <ClCompile Include="src\D3D9\Post\BundledShaders.cpp" />
+    <ClInclude Include="src\D3D9\Post\BundledShaders.h" />
+    <ClCompile Include="src\D3D9\Post\DeviceState.cpp" />
+    <ClInclude Include="src\D3D9\Post\DeviceState.h" />
+    <ClCompile Include="src\D3D9\Post\FullScreenPass.cpp" />
+    <ClInclude Include="src\D3D9\Post\FullScreenPass.h" />
+    <ClCompile Include="src\D3D9\Post\PostChain.cpp" />
+    <ClInclude Include="src\D3D9\Post\PostChain.h" />
+    <ClCompile Include="src\D3D9\Post\PostOptions.cpp" />
+    <ClInclude Include="src\D3D9\Post\PostOptions.h" />
+    <ClCompile Include="src\D3D9\Post\SceneUpscale.cpp" />
+    <ClInclude Include="src\D3D9\Post\SceneUpscale.h" />
+    <ClCompile Include="src\D3D9\Post\ScratchTarget.cpp" />
+    <ClInclude Include="src\D3D9\Post\ScratchTarget.h" />
+    <ClCompile Include="src\D3D9\Post\ShaderPack.cpp" />
+    <ClInclude Include="src\D3D9\Post\ShaderPack.h" />
+    <ClInclude Include="src\D3D9\Post\Shaders\BicubicShader.h" />
+    <ClInclude Include="src\D3D9\Post\Shaders\BloomBlurShader.h" />
+    <ClInclude Include="src\D3D9\Post\Shaders\BloomBrightShader.h" />
+    <ClInclude Include="src\D3D9\Post\Shaders\BloomMixShader.h" />
+    <ClInclude Include="src\D3D9\Post\Shaders\FxaaShader.h" />
+    <ClInclude Include="src\D3D9\Post\Shaders\LanczosShader.h" />
+    <ClInclude Include="src\D3D9\Post\Shaders\LookShader.h" />
+    <ClInclude Include="src\D3D9\Post\Shaders\RcasShader.h" />
+    <ClInclude Include="src\D3D9\Post\Shaders\SceneUpscaleShader.h" />
+    <ClInclude Include="src\D3D9\Post\Shaders\SharpenShader.h" />
+    <ClCompile Include="src\D3D9\Post\ShaderSource.cpp" />
+    <ClInclude Include="src\D3D9\Post\ShaderSource.h" />
+    <ClCompile Include="src\D3D9\Post\UpscaleFilter.cpp" />
+    <ClInclude Include="src\D3D9\Post\UpscaleFilter.h" />
+    <ClCompile Include="src\D3D9\QuadRenderer.cpp" />
+    <ClInclude Include="src\D3D9\QuadRenderer.h" />
+    <ClCompile Include="src\Overlay\Window\GraphicsPanel.cpp" />
+    <ClInclude Include="src\Overlay\Window\GraphicsPanel.h" />
+    <ClInclude Include="src\Performance\EngineQuality.h" />
+    <ClCompile Include="src\Performance\Improvements.cpp" />
+    <ClInclude Include="src\Performance\Improvements.h" />
+    <ClInclude Include="src\Performance\InputLagMeter.h" />
+    <ClCompile Include="src\Performance\PerformanceModule.cpp" />
+    <ClInclude Include="src\Performance\PerformanceModule.h" />
+    <ClCompile Include="src\Performance\PotatoMode.cpp" />
+    <ClInclude Include="src\Performance\PotatoMode.h" />
+    <ClCompile Include="src\Performance\PresentSize.cpp" />
+    <ClInclude Include="src\Performance\PresentSize.h" />
+    <ClCompile Include="src\Performance\PumpWait.cpp" />
+    <ClInclude Include="src\Performance\PumpWait.h" />
+    <ClInclude Include="src\Performance\StageColor.h" />
+    <ClCompile Include="src\D3D9\GameFont.cpp" />
+    <ClInclude Include="src\D3D9\GameFont.h" />
+    <ClCompile Include="src\Game\GameAssets.cpp" />
+    <ClInclude Include="src\Game\GameAssets.h" />
+    <ClCompile Include="src\Overlay\FrameMeterHud.cpp" />
+    <ClInclude Include="src\Overlay\FrameMeterHud.h" />
+    <ClCompile Include="src\Overlay\Window\FrameMeterLegendWindow.cpp" />
+    <ClInclude Include="src\Overlay\Window\FrameMeterLegendWindow.h" />
+    <ClCompile Include="src\Performance\EngineQuality.cpp" />
+    <ClCompile Include="src\Performance\InputLagMeter.cpp" />
+    <ClCompile Include="src\Performance\RenderMap.cpp" />
+    <ClInclude Include="src\Performance\RenderMap.h" />
+    <ClCompile Include="src\Performance\StageColor.cpp" />
+    <ClCompile Include="src\Training\Commands.cpp" />
+    <ClInclude Include="src\Training\Commands.h" />
+    <ClCompile Include="src\Training\FrameMeter.cpp" />
+    <ClInclude Include="src\Training\FrameMeter.h" />
+    <ClCompile Include="src\Training\Players.cpp" />
+    <ClInclude Include="src\Training\Players.h" />
+    <ClCompile Include="src\Training\PlayerState.cpp" />
+    <ClInclude Include="src\Training\PlayerState.h" />
+    <ClCompile Include="src\Training\SuperFlash.cpp" />
+    <ClInclude Include="src\Training\SuperFlash.h" />
+    <ClInclude Include="src\Training\TickListener.h" />
+    <ClCompile Include="src\Network\PaletteShare.cpp" />
+    <ClInclude Include="src\Network\PaletteShare.h" />
+    <ClCompile Include="src\Network\SteamNetwork.cpp" />
+    <ClInclude Include="src\Network\SteamNetwork.h" />
+    <ClCompile Include="src\Overlay\Window\PaletteWindow.cpp" />
+    <ClInclude Include="src\Overlay\Window\PaletteWindow.h" />
+    <ClCompile Include="src\Palette\BasePals.cpp" />
+    <ClInclude Include="src\Palette\BasePals.h" />
+    <ClCompile Include="src\Palette\Characters.cpp" />
+    <ClInclude Include="src\Palette\Characters.h" />
+    <ClCompile Include="src\Palette\ColorPartTable.cpp" />
+    <ClInclude Include="src\Palette\ColorPartTable.h" />
+    <ClCompile Include="src\Palette\EffectPaint.cpp" />
+    <ClInclude Include="src\Palette\EffectPaint.h" />
+    <ClCompile Include="src\Palette\EffectTable.cpp" />
+    <ClInclude Include="src\Palette\EffectTable.h" />
+    <ClCompile Include="src\Palette\LivePalette.cpp" />
+    <ClInclude Include="src\Palette\LivePalette.h" />
+    <ClCompile Include="src\Palette\PaletteChoice.cpp" />
+    <ClInclude Include="src\Palette\PaletteChoice.h" />
+    <ClCompile Include="src\Palette\PaletteControl.cpp" />
+    <ClInclude Include="src\Palette\PaletteControl.h" />
+    <ClCompile Include="src\Palette\PaletteFile.cpp" />
+    <ClInclude Include="src\Palette\PaletteFile.h" />
+    <ClCompile Include="src\Palette\PaletteLibrary.cpp" />
+    <ClInclude Include="src\Palette\PaletteLibrary.h" />
+    <ClCompile Include="src\Palette\PaletteModule.cpp" />
+    <ClInclude Include="src\Palette\PaletteModule.h" />
+    <ClCompile Include="src\Palette\PaletteOwner.cpp" />
+    <ClInclude Include="src\Palette\PaletteOwner.h" />
+    <ClCompile Include="src\Palette\PalettePaint.cpp" />
+    <ClInclude Include="src\Palette\PalettePaint.h" />
+    <ClCompile Include="src\Palette\PaletteTexture.cpp" />
+    <ClInclude Include="src\Palette\PaletteTexture.h" />
+    <ClCompile Include="src\Palette\PartColourTable.cpp" />
+    <ClInclude Include="src\Palette\PartColourTable.h" />
+    <ClCompile Include="src\Palette\PngPalette.cpp" />
+    <ClInclude Include="src\Palette\PngPalette.h" />
+    <ClCompile Include="src\Palette\StockPalettes.cpp" />
+    <ClInclude Include="src\Palette\StockPalettes.h" />
+    <ClCompile Include="src\Palette\UsedEntryTable.cpp" />
+    <ClInclude Include="src\Palette\UsedEntryTable.h" />
+    <ClCompile Include="src\Training\Invulnerability.cpp" />
+    <ClInclude Include="src\Training\Invulnerability.h" />
+    <ClCompile Include="src\Game\HiddenCharacters.cpp" />
+    <ClInclude Include="src\Game\HiddenCharacters.h" />
+    <ClCompile Include="src\Game\SaveDataGuard.cpp" />
+    <ClInclude Include="src\Game\SaveDataGuard.h" />
+    <ClCompile Include="src\Game\SceneMap.cpp" />
+    <ClInclude Include="src\Game\SceneMap.h" />
+    <ClCompile Include="src\Game\SceneWatch.cpp" />
+    <ClInclude Include="src\Game\SceneWatch.h" />
+    <ClCompile Include="src\Game\GameRestart.cpp" />
+    <ClInclude Include="src\Game\GameRestart.h" />
+    <ClCompile Include="src\Training\BattleHud.cpp" />
+    <ClInclude Include="src\Training\BattleHud.h" />
+    <ClCompile Include="src\Training\CharacterDraw.cpp" />
+    <ClInclude Include="src\Training\CharacterDraw.h" />
+    <ClCompile Include="src\Stages\StageBloom.cpp" />
+    <ClInclude Include="src\Stages\StageBloom.h" />
+    <ClCompile Include="src\Stages\CharacterLight.cpp" />
+    <ClInclude Include="src\Stages\CharacterLight.h" />
+    <ClCompile Include="depends\imgui\imgui.cpp" />
+    <ClCompile Include="depends\imgui\imgui_demo.cpp" />
+    <ClCompile Include="depends\imgui\imgui_draw.cpp" />
+    <ClCompile Include="depends\imgui\imgui_tables.cpp" />
+    <ClCompile Include="depends\imgui\imgui_widgets.cpp" />
+    <ClCompile Include="depends\imgui\backends\imgui_impl_dx9.cpp" />
+    <ClCompile Include="depends\imgui\backends\imgui_impl_win32.cpp" />
+    <ClInclude Include="depends\imgui\imconfig.h" />
+    <ClInclude Include="depends\imgui\imgui.h" />
+    <ClInclude Include="depends\imgui\imgui_internal.h" />
+    <ClInclude Include="depends\imgui\backends\imgui_impl_dx9.h" />
+    <ClInclude Include="depends\imgui\backends\imgui_impl_win32.h" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="resource\dinput8.def" />
+    <None Include="resource\MBTL_IM.ini" />
+    <None Include="resource\shaders\bloom_blur.hlsl" />
+    <None Include="resource\shaders\bloom_bright.hlsl" />
+    <None Include="resource\shaders\bloom_mix.hlsl" />
+    <None Include="resource\shaders\fxaa.hlsl" />
+    <None Include="resource\shaders\look.hlsl" />
+    <None Include="resource\shaders\rcas.hlsl" />
+    <None Include="resource\shaders\sceneupscale.hlsl" />
+    <None Include="resource\shaders\sharpen.hlsl" />
+    <None Include="resource\shaders\upscale_bicubic.hlsl" />
+    <None Include="resource\shaders\upscale_lanczos.hlsl" />
+    <None Include="resource\shaders\examples\01_passthrough.hlsl" />
+    <None Include="resource\shaders\examples\02_grayscale.hlsl" />
+    <None Include="resource\shaders\examples\03_sepia.hlsl" />
+    <None Include="resource\shaders\examples\04_invert.hlsl" />
+    <None Include="resource\shaders\examples\05_posterize.hlsl" />
+    <None Include="resource\shaders\examples\06_pixelate.hlsl" />
+    <None Include="resource\shaders\examples\07_chromatic.hlsl" />
+    <None Include="resource\shaders\examples\08_film_grain.hlsl" />
+    <None Include="resource\shaders\examples\09_vhs.hlsl" />
+    <None Include="resource\shaders\examples\10_lcd_grid.hlsl" />
+    <None Include="resource\shaders\examples\11_outline.hlsl" />
+    <None Include="resource\shaders\examples\12_crt.hlsl" />
+    <None Include="resource\shaders\examples\13_reshade_tonemap.fx" />
+    <None Include="resource\shaders\examples\14_slang_scanlines.slang" />
+    <None Include="resource\shaders\examples\15_shadertoy_ripple.glsl" />
+    <None Include="resource\shaders\examples\16_bleach_bypass.ps" />
+    <None Include="resource\shaders\examples\17_dot_matrix.frag" />
+    <None Include="resource\shaders\examples\18_bloom_glow.fsh" />
+    <None Include="resource\basepals.rc" />
+    <None Include="resource\basepals\chr000.png" />
+    <None Include="resource\basepals\chr001_p1.png" />
+    <None Include="resource\basepals\chr001.png" />
+    <None Include="resource\basepals\chr002.png" />
+    <None Include="resource\basepals\chr003.png" />
+    <None Include="resource\basepals\chr004.png" />
+    <None Include="resource\basepals\chr005.png" />
+    <None Include="resource\basepals\chr006.png" />
+    <None Include="resource\basepals\chr008.png" />
+    <None Include="resource\basepals\chr009.png" />
+    <None Include="resource\basepals\chr010.png" />
+    <None Include="resource\basepals\chr011_p1.png" />
+    <None Include="resource\basepals\chr011.png" />
+    <None Include="resource\basepals\chr012.png" />
+    <None Include="resource\basepals\chr013.png" />
+    <None Include="resource\basepals\chr014.png" />
+    <None Include="resource\basepals\chr015.png" />
+    <None Include="resource\basepals\chr016.png" />
+    <None Include="resource\basepals\chr017_p1.png" />
+    <None Include="resource\basepals\chr017.png" />
+    <None Include="resource\basepals\chr018.png" />
+    <None Include="resource\basepals\chr019_p1.png" />
+    <None Include="resource\basepals\chr019_p3.png" />
+    <None Include="resource\basepals\chr019.png" />
+    <None Include="resource\basepals\chr020.png" />
+    <None Include="resource\basepals\chr021.png" />
+    <None Include="resource\basepals\chr022.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ResourceCompile Include="resource\MBTL_IM.rc" />
+  </ItemGroup>
+
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets" />
+
+  <Target Name="SyncShaderExamples" BeforeTargets="PrepareForBuild">
+    <ItemGroup>
+      <ShaderExampleFile Include="$(ProjectDir)resource\shaders\examples\*.hlsl;$(ProjectDir)resource\shaders\examples\*.ps;$(ProjectDir)resource\shaders\examples\*.fx;$(ProjectDir)resource\shaders\examples\*.slang;$(ProjectDir)resource\shaders\examples\*.glsl;$(ProjectDir)resource\shaders\examples\*.frag;$(ProjectDir)resource\shaders\examples\*.fsh" />
+    </ItemGroup>
+    <WriteLinesToFile File="$(ProjectDir)resource\shaderexamples.rc" Overwrite="true" WriteOnlyWhenDifferent="true"
+                      Lines="@(ShaderExampleFile-&gt;'&quot;%(Filename)%(Extension)&quot; SHADEREXAMPLE &quot;shaders\\examples\\%(Filename)%(Extension)&quot;')" />
+  </Target>
+
+  <Target Name="CopyResources" AfterTargets="Build">
+    <Copy SourceFiles="$(ProjectDir)resource\MBTL_IM.ini" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" Condition="!Exists('$(OutDir)MBTL_IM.ini')" />
+  </Target>
+
+  <Target Name="DeployToGame" AfterTargets="Build"
+          Condition="'$(DeployToGame)'!='false' And Exists('$(GameDir)MBTL.exe')">
+    <Copy SourceFiles="$(OutDir)$(TargetName).dll;$(OutDir)$(TargetName).pdb"
+          DestinationFolder="$(GameDir)" ContinueOnError="true" />
+    <Copy SourceFiles="$(ProjectDir)resource\MBTL_IM.ini" DestinationFolder="$(GameDir)MBTL-IM"
+          Condition="!Exists('$(GameDir)MBTL-IM\MBTL_IM.ini')" ContinueOnError="true" />
+    <WriteLinesToFile File="$(GameDir)steam_appid.txt" Lines="$(SteamAppId)" Overwrite="true"
+                      Condition="!Exists('$(GameDir)steam_appid.txt')" ContinueOnError="true" />
+  </Target>
+
+  <UsingTask TaskName="SyncFilters" TaskFactory="RoslynCodeTaskFactory"
+             AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <Compiles ParameterType="Microsoft.Build.Framework.ITaskItem[]" Required="true" />
+      <Includes ParameterType="Microsoft.Build.Framework.ITaskItem[]" Required="true" />
+      <Nones ParameterType="Microsoft.Build.Framework.ITaskItem[]" Required="true" />
+      <Resources ParameterType="Microsoft.Build.Framework.ITaskItem[]" Required="false" />
+      <OutputFile ParameterType="System.String" Required="true" />
+    </ParameterGroup>
+    <Task>
+      <Code Type="Class" Language="cs"><![CDATA[
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Text;
+using Microsoft.Build.Framework;
+using Microsoft.Build.Utilities;
+
+public class SyncFilters : Task
+{
+    public ITaskItem[] Compiles { get; set; }
+    public ITaskItem[] Includes { get; set; }
+    public ITaskItem[] Nones { get; set; }
+    public ITaskItem[] Resources { get; set; }
+    public string OutputFile { get; set; }
+
+    const char Sep = (char)92;
+    static readonly string Wall = Sep.ToString();
+    static readonly string Quote = ((char)34).ToString();
+    static readonly string Nl = ((char)13).ToString() + ((char)10).ToString();
+
+    static readonly string[][] Roots =
+    {
+        new[] { "depends" + Wall + "minhook" + Wall + "src", "Dependencies" + Wall + "MinHook" },
+        new[] { "depends" + Wall + "minhook", "Dependencies" + Wall + "MinHook" },
+        new[] { "depends" + Wall + "imgui", "Dependencies" + Wall + "ImGui" },
+        new[] { "resource", "Resources" },
+        new[] { "src", "" },
+    };
+
+    static string FilterOf(string spec)
+    {
+        var dir = Path.GetDirectoryName(spec ?? string.Empty) ?? string.Empty;
+        dir = dir.Replace((char)47, Sep).Trim(Sep);
+
+        foreach (var pair in Roots)
+        {
+            if (string.Equals(dir, pair[0], StringComparison.OrdinalIgnoreCase))
+                return pair[1];
+
+            var prefix = pair[0] + Wall;
+
+            if (dir.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            {
+                var rest = dir.Substring(prefix.Length);
+                return pair[1].Length == 0 ? rest : pair[1] + Wall + rest;
+            }
+        }
+
+        return dir;
+    }
+
+    static ulong Fnv(string text, ulong seed)
+    {
+        var hash = seed;
+
+        foreach (var c in text)
+        {
+            hash ^= c;
+            hash *= 1099511628211UL;
+        }
+
+        return hash;
+    }
+
+    static string Identifier(string name)
+    {
+        var key = name.ToLowerInvariant();
+        var hex = Fnv(key, 14695981039346656037UL).ToString("x16") +
+                  Fnv(key + Wall, 1469598103934665603UL).ToString("x16");
+
+        return "{" + hex.Substring(0, 8) + "-" + hex.Substring(8, 4) + "-" + hex.Substring(12, 4) +
+               "-" + hex.Substring(16, 4) + "-" + hex.Substring(20, 12) + "}";
+    }
+
+    static void Group(StringBuilder text, string element, ITaskItem[] items, SortedSet<string> folders)
+    {
+        if (items == null || items.Length == 0)
+            return;
+
+        text.Append("  <ItemGroup>" + Nl);
+
+        foreach (var item in items)
+        {
+            var filter = FilterOf(item.ItemSpec);
+            var open = "    <" + element + " Include=" + Quote + item.ItemSpec + Quote;
+
+            if (filter.Length == 0)
+            {
+                text.Append(open + " />" + Nl);
+                continue;
+            }
+
+            for (var at = filter.IndexOf(Sep); at >= 0; at = filter.IndexOf(Sep, at + 1))
+                folders.Add(filter.Substring(0, at));
+
+            folders.Add(filter);
+
+            text.Append(open + ">" + Nl);
+            text.Append("      <Filter>" + filter + "</Filter>" + Nl);
+            text.Append("    </" + element + ">" + Nl);
+        }
+
+        text.Append("  </ItemGroup>" + Nl);
+    }
+
+    public override bool Execute()
+    {
+        var folders = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
+        var body = new StringBuilder();
+
+        Group(body, "ClCompile", Compiles, folders);
+        Group(body, "ClInclude", Includes, folders);
+        Group(body, "None", Nones, folders);
+        Group(body, "ResourceCompile", Resources, folders);
+
+        var text = new StringBuilder();
+        text.Append("<?xml version=" + Quote + "1.0" + Quote + " encoding=" + Quote + "utf-8" + Quote + "?>" + Nl);
+        text.Append("<Project ToolsVersion=" + Quote + "4.0" + Quote + " xmlns=" + Quote +
+                    "http://schemas.microsoft.com/developer/msbuild/2003" + Quote + ">" + Nl);
+        text.Append("  <ItemGroup>" + Nl);
+
+        foreach (var folder in folders)
+        {
+            text.Append("    <Filter Include=" + Quote + folder + Quote + ">" + Nl);
+            text.Append("      <UniqueIdentifier>" + Identifier(folder) + "</UniqueIdentifier>" + Nl);
+            text.Append("    </Filter>" + Nl);
+        }
+
+        text.Append("  </ItemGroup>" + Nl);
+        text.Append(body.ToString());
+        text.Append("</Project>");
+
+        var wanted = text.ToString();
+
+        if (File.Exists(OutputFile) && File.ReadAllText(OutputFile) == wanted)
+            return true;
+
+        File.WriteAllText(OutputFile, wanted, new UTF8Encoding(true));
+        Log.LogMessage(MessageImportance.High,
+            "Solution Explorer folders rebuilt: " + folders.Count + " filter(s)");
+
+        return true;
+    }
+}
+]]></Code>
+    </Task>
+  </UsingTask>
+
+  <Target Name="SyncProjectFilters" BeforeTargets="PrepareForBuild"
+          Condition="'$(SyncFilters)'!='false' And '$(DesignTimeBuild)'!='true'">
+    <SyncFilters Compiles="@(ClCompile)" Includes="@(ClInclude)" Nones="@(None)"
+                 Resources="@(ResourceCompile)"
+                 OutputFile="$(MSBuildProjectFullPath).filters" />
+  </Target>
+</Project>

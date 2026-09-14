@@ -75,7 +75,7 @@ const char* OggProblem(const std::string& path)
 	const size_t read = ReadHead(path, head, sizeof(head));
 
 	if (read < kFirstPacketAt)
-		return "that file could not be read, or is too short to be music";
+		return "could not read that file, or it is too short";
 
 	if (std::memcmp(head, kPageMagic, sizeof(kPageMagic)) != 0)
 		return "that is not an OGG file. Convert it to OGG Vorbis first";
@@ -83,7 +83,7 @@ const char* OggProblem(const std::string& path)
 	const size_t packet = kFirstPacketAt + head[kSegmentCountAt];
 
 	if (packet + sizeof(kVorbisMagic) > read || std::memcmp(head + packet, kVorbisMagic, sizeof(kVorbisMagic)) != 0)
-		return "that OGG does not hold Vorbis audio (Opus or FLAC in OGG will not play). Convert it to OGG Vorbis";
+		return "that OGG file is not Vorbis audio (Opus and FLAC do not play). Convert it to OGG Vorbis";
 
 	return nullptr;
 }
@@ -244,7 +244,7 @@ void UserTracks::Load()
 bool UserTracks::Import(const std::string& source, char* status, size_t statusSize)
 {
 	if (!BgmTable::IsReady())
-		return Report(status, statusSize, "the game's BGM table was not found, so there is nowhere to put a new track");
+		return Report(status, statusSize, "adding music does not work on this game version");
 
 	const char* const problem = OggProblem(source);
 
@@ -254,19 +254,19 @@ bool UserTracks::Import(const std::string& source, char* status, size_t statusSi
 	const int id = FreeId();
 
 	if (id == BgmTable::kNoTrack)
-		return Report(status, statusSize, "every BGM number from 127 to 199 is already taken");
+		return Report(status, statusSize, "music numbers 127 to 199 are all taken");
 
 	const std::string file = FreeFileName(source);
 
 	if (file.empty())
-		return Report(status, statusSize, "no free file name is left for that track");
+		return Report(status, statusSize, "no free file name for that track");
 
 	CreateDirectoryTree(Root());
 
 	if (!CopyFileA(source.c_str(), PathOf(file).c_str(), TRUE))
 	{
 		const DWORD error = GetLastError();
-		sprintf_s(status, statusSize, "the file could not be copied into %s (error %lu)", Root().c_str(), error);
+		sprintf_s(status, statusSize, "could not copy the file to %s (error %lu)", Root().c_str(), error);
 		LOG("UserTracks: %s", status);
 		return false;
 	}
@@ -281,7 +281,7 @@ bool UserTracks::Import(const std::string& source, char* status, size_t statusSi
 	ModFiles::Rescan();
 	BgmTable::WriteTrack(id, file.c_str(), track.loop, track.loopPosition);
 
-	sprintf_s(status, statusSize, "%s is BGM %03d and ready to play", file.c_str(), id);
+	sprintf_s(status, statusSize, "%s is track %03d, ready to play", file.c_str(), id);
 	LOG("UserTracks: %s", status);
 	return true;
 }

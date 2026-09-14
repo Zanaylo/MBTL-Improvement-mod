@@ -160,7 +160,7 @@ void DrawUserState(const UserTracks::Track& track)
 
 	if (!UserTracks::IsLive(track))
 	{
-		UiText::Warn("%03d holds another track. Remove it and import again", track.id);
+		UiText::Warn("%03d is used by another track. Remove it and import again", track.id);
 		return;
 	}
 
@@ -182,7 +182,7 @@ void MusicPanel::Draw()
 {
 	if (!BgmControl::IsHooked())
 	{
-		UiText::Warn("Music control is not active: %s", BgmControl::StatusText());
+		UiText::Warn("Music control is off: %s", BgmControl::StatusText());
 		return;
 	}
 
@@ -220,16 +220,16 @@ void MusicPanel::Draw()
 void MusicPanel::DrawStatus()
 {
 	if (BgmTable::IsMuted())
-		UiText::Warn("The game has its music switched off in its options, so nothing will play.");
+		UiText::Warn("Music is off in the game options, so nothing plays.");
 
 	const int playing = BgmTable::Playing();
 	const int held = BgmControl::HeldId();
-	char name[96] = "silence";
+	char name[96] = "nothing";
 
 	if (playing != kNoTrack)
 		LabelOf(playing, name, sizeof(name));
 
-	ImGui::Text("Playing: %s%s", name, held != kNoTrack ? "  (your pick, held)" : "");
+	ImGui::Text("Playing: %s%s", name, held != kNoTrack ? "  (your pick)" : "");
 
 	ImGui::SameLine();
 	ImGui::BeginDisabled(playing == kNoTrack && held == kNoTrack);
@@ -243,7 +243,7 @@ void MusicPanel::DrawStatus()
 	{
 		ImGui::SameLine();
 
-		if (ImGui::SmallButton("Give it back"))
+		if (ImGui::SmallButton("Let the game choose"))
 			BgmControl::Release();
 	}
 
@@ -272,7 +272,7 @@ void MusicPanel::DrawBrowse()
 	ImGui::SameLine();
 	ImGui::TextDisabled("%d of %d tracks", CountMatching(m_search), BgmCatalog::Count());
 
-	UiText::Muted("Play starts a track and holds it until you press Stop or Give it back.");
+	UiText::Muted("Play keeps a track on until you press Stop or Let the game choose.");
 
 	DrawVolumeTools();
 	DrawTrackTable();
@@ -285,8 +285,8 @@ void MusicPanel::DrawRandomizer()
 	if (ImGui::Checkbox("Randomizer", &enabled))
 		BgmShuffle::SetEnabled(enabled);
 
-	UiText::Help("Plays a random track from the ones ticked in Draw on any screen your rules do not cover. The "
-		"track stays until the game asks for other music. Tracks that do not loop start unticked.");
+	UiText::Help("Plays a random track ticked in the Draw column on screens with no rule. It stays until the game "
+		"asks for new music. Tracks that do not loop start unticked.");
 
 	ImGui::SameLine();
 	ImGui::BeginDisabled(!enabled);
@@ -306,18 +306,18 @@ void MusicPanel::DrawRandomizer()
 		BgmShuffle::SetAllInDraw(false);
 
 	ImGui::SameLine();
-	ImGui::TextDisabled("%d in the draw", CountInDraw());
+	ImGui::TextDisabled("%d ticked", CountInDraw());
 }
 
 void MusicPanel::DrawVolumeTools()
 {
 	ImGui::TextUnformatted("Volume per track");
-	UiText::Help("Saved in MBTL-IM\\Music\\music.ini and applied on top of the game's BGM volume. It can only make "
-		"a track quieter, never louder.");
+	UiText::Help("Works on top of the game's music volume and can only make a track quieter. Saved in "
+		"MBTL-IM\\Music\\music.ini.");
 
 	if (!BgmVolume::IsHooked())
-		UiText::Warn("SetBgmVolume is not hooked, so changing the volume in the game's options resets a quieter "
-			"track to full until the next one starts.");
+		UiText::Warn("On this game version, changing the music volume in the game options puts a quieter track "
+			"back to full until the next track starts.");
 
 	const int custom = BgmVolume::CustomCount();
 
@@ -333,7 +333,7 @@ void MusicPanel::DrawVolumeTools()
 	}
 
 	ImGui::SameLine();
-	ImGui::TextDisabled("%d track(s) held back", custom);
+	ImGui::TextDisabled("%d track(s) made quieter", custom);
 }
 
 void MusicPanel::DrawTrackTable()
@@ -444,9 +444,9 @@ void MusicPanel::DrawAddMusic()
 
 	ImGui::EndDisabled();
 
-	UiText::Help("Copies the file to MBTL-IM\\Mods\\Bgm under a free BGM number, counting down from 199. It plays "
-		"right away and stays after a restart. Only OGG Vorbis works. Convert MP3, WAV or FLAC to OGG Vorbis "
-		"first, for example with Audacity.");
+	UiText::Help("Copies the file to MBTL-IM\\Mods\\Bgm with a free number (199 and down). You can play it right "
+		"away and it stays after a restart. Only OGG Vorbis works: convert MP3, WAV or FLAC first, for example "
+		"with Audacity.");
 
 	ImGui::SameLine();
 
@@ -454,7 +454,7 @@ void MusicPanel::DrawAddMusic()
 		OpenFolder(UserTracks::Root());
 
 	if (!BgmTable::IsReady())
-		UiText::Warn("The game's BGM table was not found on this version, so new tracks cannot be added.");
+		UiText::Warn("Adding music does not work on this game version.");
 
 	if (m_importStatus[0] != '\0')
 		UiText::Muted("%s", m_importStatus);
@@ -463,7 +463,7 @@ void MusicPanel::DrawAddMusic()
 
 	if (UserTracks::Count() == 0)
 	{
-		UiText::Muted("No music of your own yet.");
+		UiText::Muted("You have not added any music yet.");
 		return;
 	}
 
@@ -473,8 +473,8 @@ void MusicPanel::DrawAddMusic()
 void MusicPanel::DrawUserTable()
 {
 	ImGui::TextUnformatted("Your tracks");
-	UiText::Help("Loop from is the second a looping track jumps back to when it ends. 0 repeats the whole track. "
-		"Set it past the intro to loop like the game's music. Changes apply the next time the track starts.");
+	UiText::Help("Loop from: the second a looping track jumps back to when it ends. 0 repeats the whole track. Set "
+		"it after the intro to skip the intro on repeat. Changes apply the next time the track starts.");
 
 	if (!ImGui::BeginTable("##usertracks", 6, kListFlags, ImVec2(0.0f, Ui::Scaled(kUserHeight))))
 		return;
@@ -556,9 +556,9 @@ bool MusicPanel::DrawUserRow(const UserTracks::Track& track)
 
 void MusicPanel::DrawRules()
 {
-	UiText::Muted("A rule answers the game: when it asks for one track, play another.");
-	UiText::Help("For each track, the first active rule wins. Rules do not chain. A track held from Browse beats "
-		"every rule. The randomizer only covers screens with no rule.");
+	UiText::Muted("A rule plays another track whenever the game plays the one you pick.");
+	UiText::Help("If two rules replace the same track, the top one wins. Rules do not chain. A track you play from "
+		"Browse beats every rule. The randomizer only works on screens with no rule.");
 
 	if (BgmRules::Count() == 0)
 	{
@@ -618,7 +618,7 @@ bool MusicPanel::DrawRuleRow(int index)
 	ImGui::Text("Replace %s with %s", from, to);
 
 	if (!playable)
-		UiText::Warn("There is no track at %03d, so this rule does nothing.", rule.to);
+		UiText::Warn("Track %03d does not exist, so this rule does nothing.", rule.to);
 
 	ImGui::TableNextColumn();
 	ImGui::BeginDisabled(!playable);

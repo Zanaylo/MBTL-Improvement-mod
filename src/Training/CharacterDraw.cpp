@@ -30,7 +30,7 @@ ObjectDraw_t oObjectDraw = nullptr;
 
 bool g_hooked = false;
 volatile LONG g_seenTypes = 0;
-const char* g_status = "the object draw was not found in this build";
+const char* g_status = "does not work in this game version";
 
 std::vector<uint8_t*> Unique(const std::vector<uint8_t*>& list)
 {
@@ -172,7 +172,7 @@ void CharacterDraw::Install()
 	g_hooked = HookManager::CreateHook(draw, reinterpret_cast<void*>(&HookedObjectDraw),
 		reinterpret_cast<void**>(&oObjectDraw), "object draw");
 
-	g_status = g_hooked ? "" : "the object draw could not be hooked";
+	g_status = g_hooked ? "" : "could not start";
 	LOG("CharacterDraw: %s", g_hooked ? "ready" : g_status);
 }
 

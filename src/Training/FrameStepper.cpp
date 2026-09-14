@@ -26,7 +26,7 @@ volatile LONG g_pendingSteps = 0;
 volatile LONG g_stepped = 0;
 volatile LONG64 g_calls = 0;
 volatile LONG64 g_suppressed = 0;
-char g_status[160] = "BattleStep has not been resolved";
+char g_status[160] = "not set up yet";
 std::vector<ITickListener*> g_tickListeners;
 
 bool TakeStep()
@@ -100,7 +100,7 @@ bool FrameStepper::Initialize()
 
 	if (!target)
 	{
-		strncpy_s(g_status, "BattleStep was not found in this build", _TRUNCATE);
+		strncpy_s(g_status, "does not work in this game version", _TRUNCATE);
 		LOG("FrameStepper: %s", g_status);
 		return false;
 	}
@@ -108,7 +108,7 @@ bool FrameStepper::Initialize()
 	g_hooked = HookManager::CreateHook(const_cast<uint8_t*>(target), reinterpret_cast<void*>(&HookedBattleStep),
 		reinterpret_cast<void**>(&oBattleStep), "BattleStep");
 
-	strncpy_s(g_status, g_hooked ? "ready" : "the BattleStep hook could not be created", _TRUNCATE);
+	strncpy_s(g_status, g_hooked ? "ready" : "could not start", _TRUNCATE);
 	LOG("FrameStepper: %s", g_status);
 	return g_hooked;
 }

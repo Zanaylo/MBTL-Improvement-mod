@@ -70,12 +70,10 @@ const char* PaletteControl::WhyNot(int seat)
 		return "";
 
 	if (g_spectating)
-		return "You are watching this match, so neither character's colours are yours to choose. What the players are "
-			"wearing arrives from them.";
+		return "You are watching this match. The players choose their own colours, and you see what they send.";
 
 	if (IsTheirs(seat))
-		return "This is the other player's character. They choose its colours, and what they pick arrives here if they "
-			"are running the mod.";
+		return "This is the other player's character. They choose its colours. You see them if they use the mod.";
 
 	return "";
 }

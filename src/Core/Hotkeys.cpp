@@ -19,7 +19,7 @@ struct Entry
 };
 
 const Entry kEntries[Hotkeys::Action_Count] = {
-	{ "Open this window", "ToggleOverlay", &g_settings.toggleOverlayKey },
+	{ "Open the main window", "ToggleOverlay", &g_settings.toggleOverlayKey },
 	{ "Hitbox viewer", "ToggleHitboxOverlay", &g_settings.toggleHitboxKey },
 	{ "Frame meter", "ToggleFrameMeter", &g_settings.toggleFrameMeterKey },
 	{ "Pause and resume", "FreezeFrame", &g_settings.freezeFrameKey },
@@ -99,6 +99,6 @@ const char* Hotkeys::Describe(Action action)
 	static char text[32] = {};
 
 	const std::string formatted = KeyBinds::Format(Bind(action));
-	strncpy_s(text, formatted.empty() ? "unbound" : formatted.c_str(), _TRUNCATE);
+	strncpy_s(text, formatted.empty() ? "not set" : formatted.c_str(), _TRUNCATE);
 	return text;
 }

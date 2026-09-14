@@ -52,7 +52,7 @@ void StagesDebugSection::DrawLibrary()
 
 	if (entries.empty())
 	{
-		UiText::Muted("No stage installed.");
+		UiText::Muted("No stages installed.");
 		return;
 	}
 
@@ -102,8 +102,8 @@ void StagesDebugSection::DrawNumbers()
 	ImGui::TextWrapped("Free: %s", Joined(free).c_str());
 	ImGui::Text("Unlocked hidden stages: %s", Joined(unlocked).c_str());
 	ImGui::Text("Stage table: %d numbers, %d list entries, %s", StageTable::Numbers(), StageTable::ListEntries(),
-		StageTable::Lifted() ? "lifted" : "stock");
-	ImGui::Text("Picker: %d of %d entries, %d from the game", StagePicker::Used(), StagePicker::Capacity(),
+		StageTable::Lifted() ? "extended" : "normal");
+	ImGui::Text("Picker: %d of %d slots used, %d by the game", StagePicker::Used(), StagePicker::Capacity(),
 		StagePicker::GameEntries());
 }
 
@@ -116,15 +116,15 @@ void StagesDebugSection::DrawOwn()
 
 	if (!GameStages::Learned())
 	{
-		UiText::Warn("The game has not read its stage list yet, so the numbers MBTL ships are assumed.");
+		UiText::Warn("The game has not read its stage list yet. Using MBTL's default stage numbers.");
 		return;
 	}
 
-	ImGui::Text("%d stage block(s), %d listed, template card %d", static_cast<int>(own.size()),
+	ImGui::Text("%d stage(s), %d in the picker, default card %d", static_cast<int>(own.size()),
 		GameStages::ListedCount(), GameStages::TemplateCard());
 
 	for (const GameStages::Own& stage : own)
-		ImGui::Text("%3d  %s%s%s", stage.number, stage.name.c_str(), stage.listed ? "" : ", unlisted",
+		ImGui::Text("%3d  %s%s%s", stage.number, stage.name.c_str(), stage.listed ? "" : ", not in picker",
 			stage.selectDisabled ? ", SelectDisable" : "");
 }
 
@@ -134,9 +134,9 @@ void StagesDebugSection::DrawOverlays()
 
 	ImGui::SeparatorText("Overlays");
 	ImGui::Text("Version %u%s", StageRevision::Current(), StageRevision::Changed() ? ", changed this session" : "");
-	ImGui::Text("BgList.txt composed %d time(s), last %u bytes", stats.listApplied, stats.listBytes);
+	ImGui::Text("BgList.txt built %d time(s), last %u bytes", stats.listApplied, stats.listBytes);
 	ImGui::Text("BgList_str.ini extended %d time(s)", stats.namesApplied);
 	ImGui::Text("bgm.txt extended %d time(s), %s", stats.musicApplied,
-		GameStages::TracksLearned() ? "tracks learned" : "tracks not read yet");
-	ImGui::Text("Pre-battle backgrounds lent %d time(s)", stats.vsServed);
+		GameStages::TracksLearned() ? "tracks read" : "tracks not read yet");
+	ImGui::Text("Versus screen backgrounds lent %d time(s)", stats.vsServed);
 }

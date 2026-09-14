@@ -196,7 +196,7 @@ bool WindowManager::Initialize(HWND window, IDirect3DDevice9* device)
 	m_hasFocus = GetForegroundWindow() == window;
 	m_initialized = true;
 
-	NotificationBar::Add("%s %s loaded (press %s to open the main window)", MBTL_IM_NAME, MBTL_IM_VERSION,
+	NotificationBar::Add("%s %s loaded. Press %s to open the main window.", MBTL_IM_NAME, MBTL_IM_VERSION,
 		KeyBinds::Format(g_settings.toggleOverlayKey).c_str());
 
 	LOG("WindowManager initialized (ImGui %s), window 0x%p", IMGUI_VERSION, static_cast<void*>(window));

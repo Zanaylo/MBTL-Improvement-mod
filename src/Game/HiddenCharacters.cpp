@@ -328,7 +328,7 @@ bool HiddenCharacters::IsAvailable()
 const char* HiddenCharacters::StatusText()
 {
 	if (!IsAvailable())
-		return "The character table or the online check was not found in this build.";
+		return "Not supported on this game version.";
 
 	if (g_settings.unlockHiddenCharacters && !IsOffline())
 		return "Off while online.";

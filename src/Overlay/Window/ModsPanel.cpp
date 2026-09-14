@@ -99,7 +99,7 @@ void ModsPanel::DrawList()
 	}
 
 	ImGui::TableSetupColumn("On", ImGuiTableColumnFlags_WidthFixed, Ui::Scaled(kSwitchColumn));
-	ImGui::TableSetupColumn("Reading order");
+	ImGui::TableSetupColumn("Mod (top wins)");
 	ImGui::TableSetupColumn("Files", ImGuiTableColumnFlags_WidthFixed, Ui::Scaled(kFilesColumn));
 	ImGui::TableSetupColumn("Move", ImGuiTableColumnFlags_WidthFixed, Ui::Scaled(kOrderColumn));
 	ImGui::TableSetupScrollFreeze(0, 1);
@@ -136,7 +136,7 @@ void ModsPanel::DrawOwnRow()
 		ImGui::SetTooltip("%s", ModFiles::Root());
 
 	ImGui::SameLine();
-	UiText::Muted("always on, always first");
+	UiText::Muted("always on, always wins");
 
 	ImGui::TableNextColumn();
 	ImGui::Text("%d", ModFiles::OwnCount());
@@ -183,7 +183,7 @@ void ModsPanel::DrawRow(int index)
 		UiText::Muted("%s", pack->note.c_str());
 
 	if (pack->beaten > 0)
-		UiText::Warn("%d file(s) here are already answered by %s, which is higher up.", pack->beaten,
+		UiText::Warn("%d file(s) not used: %s is higher in the list and has them too.", pack->beaten,
 			pack->beatenBy.c_str());
 
 	DrawStageRow(index);
@@ -225,10 +225,10 @@ void ModsPanel::DrawStageRow(int index)
 	const ModPacks::Pack* const other = owner < 0 ? nullptr : ModPacks::At(owner);
 
 	if (other != nullptr)
-		UiText::Warn("Stage %d, the same number %s uses. Install one of them and it takes a free number instead.",
+		UiText::Warn("Stage %d, same number as %s. Install as a stage gives it a free number.",
 			pack->stage, other->name.c_str());
 	else
-		UiText::Muted("Carries stage %d.", pack->stage);
+		UiText::Muted("Has stage %d.", pack->stage);
 
 	ImGui::BeginDisabled(StageImport::IsBusy());
 
@@ -238,15 +238,15 @@ void ModsPanel::DrawStageRow(int index)
 		sprintf_s(folder, "%s\\bg\\bg%03d", pack->path.c_str(), pack->stage);
 
 		const bool started = StageImport::InstallFolder(folder, pack->name.c_str());
-		sprintf_s(m_status, "%s", started ? "installing. Restart the game when it finishes"
+		sprintf_s(m_status, "%s", started ? "Installing. Restart the game when it is done"
 			: StageImport::StatusText());
 	}
 
 	ImGui::EndDisabled();
 
 	if (ImGui::IsItemHovered())
-		ImGui::SetTooltip("A stage has to be registered in the stage list, not just dropped in, and the game reads "
-			"that list once at startup. This copies it to the next free stage number.");
+		ImGui::SetTooltip("Adds the stage to the game's stage list with the next free number. The game reads that "
+			"list at startup, so restart the game after.");
 }
 
 void ModsPanel::DrawFooter()
@@ -257,39 +257,39 @@ void ModsPanel::DrawFooter()
 		return;
 	}
 
-	UiText::Good("%d file(s) from %d mod(s) are answering for the game.", ModPacks::FileCount(),
+	UiText::Good("%d file(s) from %d mod(s) in use.", ModPacks::FileCount(),
 		ModPacks::EnabledCount());
 }
 
 void ModsPanel::DrawHelp()
 {
-	ImGui::TextWrapped("A mod is a folder with the game's own paths inside it. One that replaces a stage's "
-		"textures holds bg\\bg001 and nothing else. Install a zip or drop the folder in yourself. Either way it "
-		"is in the list within a second, with no restart.");
+	ImGui::TextWrapped("A mod is a folder that uses the game's own file paths. For example, a mod that changes the "
+		"textures of stage 1 only holds bg\\bg001. Install a zip or copy the folder in yourself. It shows up in "
+		"the list right away, no restart needed.");
 
-	ImGui::SeparatorText("What a switch does");
-	ImGui::TextWrapped("Switching one off gives the game its own file back the next time it opens it. Nothing is "
-		"copied over the game and no dataNNN.bin archive is touched, so removing every mod leaves the install "
-		"exactly as Steam put it there.");
+	ImGui::SeparatorText("Turning a mod on or off");
+	ImGui::TextWrapped("Turn a mod off and the game uses its own file the next time it loads it. Mods never "
+		"overwrite game files or dataNNN.bin archives, so removing all mods leaves the game exactly as Steam "
+		"installed it.");
 
-	ImGui::SeparatorText("When two mods want the same file");
-	ImGui::TextWrapped("The one higher in the list wins that file, and only that file. A row says so when it "
-		"happens, naming the mod that beat it.");
+	ImGui::SeparatorText("When two mods change the same file");
+	ImGui::TextWrapped("The mod higher in the list wins, for that file only. The other mod's row shows a warning "
+		"with the name of the winner.");
 
-	ImGui::TextWrapped("The whole reading order, first to last:");
-	ImGui::BulletText("Your own files: the top row, MBTL-IM\\Mods");
-	ImGui::BulletText("this list, top to bottom");
-	ImGui::BulletText("the game's own archives, which answer whatever is left");
+	ImGui::TextWrapped("Which file the game uses, from highest priority to lowest:");
+	ImGui::BulletText("Your own files in MBTL-IM\\Mods (the top row)");
+	ImGui::BulletText("The mod list, top to bottom");
+	ImGui::BulletText("The game's own files, for everything else");
 
-	ImGui::SeparatorText("Stages are different");
-	ImGui::TextWrapped("A stage has to be registered in the stage list, which the game reads once when it starts. "
-		"A mod carrying one gets an Install as a stage button instead of working off the switch.");
+	ImGui::SeparatorText("Stages");
+	ImGui::TextWrapped("A new stage must be added to the game's stage list, which the game reads at startup. A mod "
+		"with a stage gets an Install as a stage button. The On switch alone does not add it.");
 
-	ImGui::SeparatorText("Making one");
-	ImGui::TextWrapped("Put your files at the paths the game knows them by, and add a mod.ini so it has a name.");
+	ImGui::SeparatorText("Making a mod");
+	ImGui::TextWrapped("Put your files at the same paths the game uses. Add a mod.ini to give it a name:");
 	ImGui::TextUnformatted("[Mod]\nName = Sunset Bridge\nAuthor = you\nVersion = 1.0\nNote = A brighter sky.");
 
 	ImGui::SeparatorText("Online");
-	ImGui::TextWrapped("Art and sound change nothing anyone else sees, but a mod carrying data or script files "
-		"changes the simulation and the other player will desync.");
+	ImGui::TextWrapped("Art and sound mods are fine online. Only you see them. Mods with data or script files "
+		"change how the game plays and cause desyncs.");
 }

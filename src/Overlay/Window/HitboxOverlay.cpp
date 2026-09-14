@@ -26,17 +26,17 @@ struct CategoryInfo
 };
 
 const CategoryInfo kCategories[HitboxOverlay::Category_COUNT] = {
-	{ "Pushbox", IM_COL32(255, 255, 255, 255), "Body collision. Two characters cannot walk through each other." },
+	{ "Pushbox", IM_COL32(255, 255, 255, 255), "Body collision. Characters cannot walk through each other." },
 	{ "Hurtbox", IM_COL32(60, 220, 60, 255),
-		"Where the character can be hit. Throw invincibility is shown on the frame meter's status row, not here." },
+		"Where the character can be hit. Throw invincibility shows on the frame meter status row, not here." },
 	{ "Strike invulnerable", IM_COL32(90, 120, 255, 255),
-		"A hurtbox on a frame strikes and projectiles pass through. The character can still be thrown." },
+		"Hurtbox on a frame where strikes and projectiles pass through. The character can still be thrown." },
 	{ "Fully invulnerable", IM_COL32(190, 110, 255, 255),
-		"A hurtbox on a frame nothing connects: full invincibility, no hurtbox, knocked out, or linked to another "
-		"object such as the partner maid." },
+		"Hurtbox on a frame where nothing can hit: full invincibility, no hurtbox, knocked out, or tied to another "
+		"object (like the partner maid)." },
 	{ "Hitbox", IM_COL32(255, 60, 60, 255), "The attack itself." },
-	{ "Clash", IM_COL32(60, 220, 230, 255), "Box 11, drawn as the clash box by the community viewer. Not confirmed." },
-	{ "Other", IM_COL32(230, 230, 60, 255), "Boxes with no shared meaning, mostly anchors." },
+	{ "Clash", IM_COL32(60, 220, 230, 255), "Box 11. Community tools draw it as the clash box. Not confirmed." },
+	{ "Other", IM_COL32(230, 230, 60, 255), "Boxes with no common meaning, mostly anchor points." },
 };
 
 unsigned int WithAlpha(unsigned int color, float alpha)
@@ -96,10 +96,10 @@ bool HitboxOverlay::IsAvailable()
 const char* HitboxOverlay::StatusText()
 {
 	if (!HitboxData::IsAvailable())
-		return "The hitbox viewer is not available: the character array was not found in this build.";
+		return "The hitbox viewer does not work in this game version (characters not found).";
 
 	if (!Camera::IsAvailable())
-		return "The hitbox viewer is not available: the camera was not found in this build.";
+		return "The hitbox viewer does not work in this game version (camera not found).";
 
 	return "ready";
 }

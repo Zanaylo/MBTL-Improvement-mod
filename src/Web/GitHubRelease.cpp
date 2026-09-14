@@ -98,7 +98,7 @@ bool GitHubRelease::ParseLatest(const std::string& json, Release& out, std::stri
 
 	if (!Json::Parse(json, root) || !root.IsObject())
 	{
-		outError = "the answer was not the release JSON";
+		outError = "GitHub sent an unexpected reply";
 		return false;
 	}
 
@@ -106,7 +106,7 @@ bool GitHubRelease::ParseLatest(const std::string& json, Release& out, std::stri
 
 	if (out.tag.empty())
 	{
-		outError = "the answer carries no tag";
+		outError = "the release has no version tag";
 		return false;
 	}
 

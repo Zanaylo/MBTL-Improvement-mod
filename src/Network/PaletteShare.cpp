@@ -59,7 +59,7 @@ bool g_everSent = false;
 
 int g_sentCount = 0;
 int g_receivedCount = 0;
-char g_status[192] = "nothing sent or received yet";
+char g_status[192] = "Nothing sent or received yet.";
 
 Remote g_remote[PaletteOwner::kSeats] = {};
 
@@ -98,11 +98,11 @@ void UpdateStatus()
 	char seat[32] = {};
 
 	if (own < 0)
-		strncpy_s(seat, "seat unknown", _TRUNCATE);
+		strncpy_s(seat, "your side is unknown", _TRUNCATE);
 	else
-		sprintf_s(seat, "you are p%d", own + 1);
+		sprintf_s(seat, "you are P%d", own + 1);
 
-	sprintf_s(g_status, "%s, %s, sent %d, received %d%s", SteamNetwork::IsReady() ? "Steam ready" : "no Steam", seat,
+	sprintf_s(g_status, "%s, %s, sent %d, received %d%s", SteamNetwork::IsReady() ? "Steam ready" : "No Steam", seat,
 		g_sentCount, g_receivedCount, SteamNetwork::HasPeer() ? "" : ", no opponent yet");
 }
 

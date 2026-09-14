@@ -17,7 +17,7 @@ void DebugWindow::BeforeDraw()
 
 void DebugWindow::Draw()
 {
-	if (ImGui::Button("Open the log folder"))
+	if (ImGui::Button("Open log folder"))
 		ShellExecuteA(nullptr, "open", GetModRootPath("Logs").c_str(), nullptr, nullptr, SW_SHOWNORMAL);
 
 	DrawSection(m_hooks);

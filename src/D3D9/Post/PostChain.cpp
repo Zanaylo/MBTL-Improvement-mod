@@ -276,11 +276,11 @@ const char* StageName(int stage)
 	case Stage_Bloom:
 		return "bloom";
 	case Stage_Look:
-		return "look";
+		return "colour";
 	case Stage_Sharpen:
 		return "sharpen";
 	default:
-		return "pack";
+		return "shader pack";
 	}
 }
 
@@ -297,11 +297,11 @@ void DescribeRun(const int* stages, int drawn, int asked, unsigned width, unsign
 
 	if (drawn == asked)
 	{
-		Report("%s over %ux%u", list, width, height);
+		Report("%s at %ux%u", list, width, height);
 		return;
 	}
 
-	Report("%s over %ux%u, %d of %d stages ran. The rest have no shader on this device", list,
+	Report("%s at %ux%u. %d of %d effects ran; your GPU cannot run the rest", list,
 		width, height, drawn, asked);
 }
 
@@ -399,7 +399,7 @@ void PostChain::Apply(IDirect3DDevice9* device)
 
 	if (resolved == 0)
 	{
-		Report("%d stage%s asked for and none of them has a shader on this device", count,
+		Report("%d effect%s on, but your GPU cannot run any of them", count,
 			count == 1 ? "" : "s");
 		return;
 	}
@@ -415,14 +415,14 @@ void PostChain::Apply(IDirect3DDevice9* device)
 	if (FAILED(backBuffer->GetDesc(&desc)) || !EnsureTargets(device, desc, resolved, bloom))
 	{
 		backBuffer->Release();
-		Report("no room for a %ux%u working copy", desc.Width, desc.Height);
+		Report("out of video memory (%ux%u)", desc.Width, desc.Height);
 		return;
 	}
 
 	if (FAILED(device->StretchRect(backBuffer, nullptr, g_front.Surface(), nullptr, D3DTEXF_NONE)))
 	{
 		backBuffer->Release();
-		Report("the back buffer cannot be copied on this device");
+		Report("your GPU cannot copy the back buffer");
 		g_failed = true;
 		LOG("[PostChain] %s", g_status);
 		return;

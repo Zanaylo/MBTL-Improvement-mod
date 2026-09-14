@@ -185,13 +185,13 @@ void RewriteDisplay(IDirect3D9* d3d9, UINT adapter, D3DPRESENT_PARAMETERS& param
 {
 	if (!g_settings.displayTuning || Compat::SafeMode())
 	{
-		Decide(Compat::SafeMode() ? "safe mode: the host owns the presentation" : "off: the game's own parameters");
+		Decide(Compat::SafeMode() ? "safe mode: display left to the host" : "off: using the game's settings");
 		return;
 	}
 
 	if (parameters.Windowed)
 	{
-		Decide("windowed: back buffer %ux%u, the compositor owns the rest", parameters.BackBufferWidth,
+		Decide("windowed: back buffer %ux%u, Windows controls the rest", parameters.BackBufferWidth,
 			parameters.BackBufferHeight);
 		return;
 	}
@@ -199,7 +199,7 @@ void RewriteDisplay(IDirect3D9* d3d9, UINT adapter, D3DPRESENT_PARAMETERS& param
 	const UINT refreshRate = ChooseRefreshRate(d3d9, adapter, parameters);
 	const UINT backBufferCount = ChooseBackBufferCount(parameters);
 
-	Decide("fullscreen, vsync %s: refresh %u -> %u, buffers %u -> %u", VsyncIsOn(parameters) ? "on" : "off",
+	Decide("fullscreen, vsync %s: refresh %u Hz to %u Hz, buffers %u to %u", VsyncIsOn(parameters) ? "on" : "off",
 		parameters.FullScreen_RefreshRateInHz, refreshRate, parameters.BackBufferCount, backBufferCount);
 
 	if (refreshRate == parameters.FullScreen_RefreshRateInHz && backBufferCount == parameters.BackBufferCount)

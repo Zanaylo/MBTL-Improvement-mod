@@ -126,7 +126,7 @@ void SideLabel(int side, char* out, size_t size)
 
 	if (main < 0)
 	{
-		sprintf_s(out, size, "P%d -##%d", side + 1, side);
+		sprintf_s(out, size, "P%d (empty)##%d", side + 1, side);
 		return;
 	}
 
@@ -227,7 +227,7 @@ void PaletteWindow::DrawPlayer(int player)
 
 	if (chara < 0)
 	{
-		ImGui::TextDisabled("nobody in this slot yet. The editor works during a match");
+		ImGui::TextDisabled("No character here yet. The editor works during a match.");
 		return;
 	}
 
@@ -238,7 +238,7 @@ void PaletteWindow::DrawPlayer(int player)
 
 	if (!StockPalettes::Load(chara))
 	{
-		ImGui::TextDisabled("this character's colour files could not be read");
+		ImGui::TextDisabled("Could not read this character's colour files.");
 		return;
 	}
 
@@ -292,12 +292,12 @@ void PaletteWindow::DrawRemote(int player)
 	const char* const name = PaletteShare::GetRemoteName(player);
 
 	if (!PalettePaint::HasRemote(player))
-		ImGui::TextDisabled("%s", PaletteControl::CanWear(player) ? "nothing has arrived from them yet"
-			: "their colours are switched off in the options");
+		ImGui::TextDisabled("%s", PaletteControl::CanWear(player) ? "Their colours have not arrived yet."
+			: "Their colours are turned off in the options.");
 	else if (name[0] != '\0')
-		ImGui::TextDisabled("wearing '%s', which they chose", name);
+		ImGui::TextDisabled("Wearing their palette '%s'.", name);
 	else
-		ImGui::TextDisabled("wearing the colours they picked in the game");
+		ImGui::TextDisabled("Wearing the colour they picked in the game.");
 
 	ImGui::Separator();
 }
@@ -344,7 +344,7 @@ void PaletteWindow::DrawSubPalettes(int player)
 	}
 
 	if (ImGui::IsItemHovered())
-		ImGui::SetTooltip("This character draws part of itself from more than one palette. Pick the one to edit.");
+		ImGui::SetTooltip("This character uses more than one palette. Pick the one to edit.");
 }
 
 void PaletteWindow::DrawSwatches(int player)
@@ -398,7 +398,7 @@ void PaletteWindow::DrawGroupedSwatches(int player)
 
 	ImGui::PushID(LivePalette::kParts);
 
-	if (ImGui::CollapsingHeader("Everything else"))
+	if (ImGui::CollapsingHeader("Other colours"))
 		DrawGrid(player, entries, restCount);
 
 	ImGui::PopID();
@@ -445,7 +445,7 @@ void PaletteWindow::DrawFlatSwatches(int player)
 
 	if (count == 0)
 	{
-		ImGui::TextDisabled("every entry looks like padding. Untick Filter junk colours");
+		ImGui::TextDisabled("All colours here look unused. Untick Filter junk colours to show them.");
 		return;
 	}
 
@@ -457,8 +457,7 @@ void PaletteWindow::DrawParts(int player)
 	if (!ImGui::CollapsingHeader("Whole parts"))
 		return;
 
-	ImGui::TextWrapped("Moves a part's whole ramp of shades at once, keeping the shading and moving only the colour "
-		"underneath.");
+	ImGui::TextWrapped("Changes every shade of a part at once. The shading stays, only the colour changes.");
 
 	for (int part = 0; part < LivePalette::kParts; ++part)
 	{
@@ -487,7 +486,7 @@ void PaletteWindow::DrawPartStock(int player, int part)
 	LivePalette::Colours& colours = side.colours[side.sub];
 	const int count = StockPalettes::GetCount(side.chara, side.sub);
 	const bool asDrawn = colours.stock[part] == LivePalette::kAsDrawn;
-	const char* const drawnLabel = part == 0 ? "As drawn" : "Follow base";
+	const char* const drawnLabel = part == 0 ? "Original" : "Same as base";
 
 	char label[32] = {};
 
@@ -582,7 +581,7 @@ void PaletteWindow::DrawPartPick(int player, int part)
 	}
 
 	if (ImGui::IsItemHovered())
-		ImGui::SetTooltip("Back to the stock colour.");
+		ImGui::SetTooltip("Go back to the stock colour.");
 }
 
 void PaletteWindow::DrawGrid(int player, const unsigned char* entries, int count)
@@ -604,7 +603,7 @@ void PaletteWindow::DrawGrid(int player, const unsigned char* entries, int count
 		}
 
 		if (ImGui::IsItemHovered())
-			ImGui::SetTooltip("entry %d%s", i, changed ? ", changed" : "");
+			ImGui::SetTooltip("Entry %d%s", i, changed ? " (changed)" : "");
 
 		NextSwatch(n, count);
 		ImGui::PopID();
@@ -618,7 +617,7 @@ void PaletteWindow::DrawPicker(int player)
 	const int selected = side.selected;
 	const uint8_t* const current = side.composed[side.sub] + selected * 4;
 
-	ImGui::Text("entry %d%s", selected, colours.edited[selected] ? "  (changed)" : "");
+	ImGui::Text("Entry %d%s", selected, colours.edited[selected] ? " (changed)" : "");
 
 	float picked[3] = { current[0] / 255.0f, current[1] / 255.0f, current[2] / 255.0f };
 
@@ -639,18 +638,18 @@ void PaletteWindow::DrawPicker(int player)
 	DrawPickerButtons(player);
 
 	if (!side.applied)
-		ImGui::TextDisabled("not worn");
+		ImGui::TextDisabled("Not applied.");
 	else if (PalettePaint::IsPainting(player))
-		ImGui::TextDisabled("worn");
+		ImGui::TextDisabled("Applied and in use.");
 	else
-		ImGui::TextDisabled("applied, waiting for this character to draw");
+		ImGui::TextDisabled("Applied. Waiting for the character to show up.");
 }
 
 void PaletteWindow::DrawPickerButtons(int player)
 {
 	Side& side = SideOf(player);
 
-	if (ImGui::Button(side.applied ? "Re-apply" : "Apply"))
+	if (ImGui::Button(side.applied ? "Apply again" : "Apply"))
 		Apply(player);
 
 	ImGui::SameLine();
@@ -659,7 +658,7 @@ void PaletteWindow::DrawPickerButtons(int player)
 	ImGui::EndDisabled();
 
 	if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
-		ImGui::SetTooltip("Takes back the last change. %d to go.", side.historyCount);
+		ImGui::SetTooltip("Undo the last change. %d left.", side.historyCount);
 
 	if (undo)
 		Undo(player);
@@ -670,8 +669,8 @@ void PaletteWindow::DrawPickerButtons(int player)
 	ImGui::EndDisabled();
 
 	if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
-		ImGui::SetTooltip("Puts the game's own colours back without losing what you have built, and stops this "
-			"character being dressed automatically next match.");
+		ImGui::SetTooltip("Puts the game's colours back. Your edits are kept, but this palette is no longer applied "
+			"automatically next match.");
 
 	if (remove)
 		Remove(player);
@@ -689,7 +688,7 @@ void PaletteWindow::DrawPickerButtons(int player)
 
 	ImGui::SameLine();
 
-	if (ImGui::Button("Re-read"))
+	if (ImGui::Button("Reload"))
 	{
 		PalettePaint::Clear(player);
 		side.applied = false;
@@ -698,8 +697,8 @@ void PaletteWindow::DrawPickerButtons(int player)
 	}
 
 	if (ImGui::IsItemHovered())
-		ImGui::SetTooltip("Takes the character's colours from the game again, for when the colour they are wearing has "
-			"been changed since this was opened. Your edits are kept.");
+		ImGui::SetTooltip("Reads the character's colours from the game again. Use it if their colour changed after you "
+			"opened this. Your edits are kept.");
 }
 
 void PaletteWindow::DrawEffects(int player)
@@ -716,7 +715,7 @@ void PaletteWindow::DrawEffects(int player)
 
 	if (count == 0)
 	{
-		ImGui::TextDisabled("this character's effects are not tinted from its palette");
+		ImGui::TextDisabled("This character's effects do not use its palette.");
 		return;
 	}
 
@@ -726,7 +725,7 @@ void PaletteWindow::DrawEffects(int player)
 	if (ImGui::Button("Reset effects"))
 		EffectPaint::Clear(player);
 
-	ImGui::TextDisabled("Effects follow the main palette unless an entry is changed here.");
+	ImGui::TextDisabled("Effects use the main palette unless you change an entry here.");
 
 	DrawEffectGrid(player, entries, count);
 	DrawEffectPicker(player);
@@ -763,8 +762,8 @@ void PaletteWindow::DrawEffectGrid(int player, const unsigned char* entries, int
 			const int parts = PartColourTable::GetPartCount(side.chara, entry);
 			const int effects = EffectTable::CountUsing(side.chara, entry);
 
-			ImGui::SetTooltip("entry %d tints %d part%s in %d effect%s%s", entry, parts, parts == 1 ? "" : "s", effects,
-				effects == 1 ? "" : "s", edited ? ", changed" : "");
+			ImGui::SetTooltip("Entry %d colours %d part%s in %d effect%s%s", entry, parts, parts == 1 ? "" : "s", effects,
+				effects == 1 ? "" : "s", edited ? " (changed)" : "");
 		}
 
 		NextSwatch(n, count);
@@ -781,7 +780,7 @@ void PaletteWindow::DrawEffectPicker(int player)
 
 	if (entry < 0)
 	{
-		ImGui::TextDisabled("pick one to change it");
+		ImGui::TextDisabled("Pick an entry to change it.");
 		return;
 	}
 
@@ -793,7 +792,7 @@ void PaletteWindow::DrawEffectPicker(int player)
 		memcpy(rgb, side.composed[0] + entry * 4, 3);
 	}
 
-	ImGui::Text("entry %d%s", entry, EffectPaint::IsEdited(player, entry) ? "  (changed)" : "");
+	ImGui::Text("Entry %d%s", entry, EffectPaint::IsEdited(player, entry) ? " (changed)" : "");
 
 	float picked[3] = { rgb[0] / 255.0f, rgb[1] / 255.0f, rgb[2] / 255.0f };
 
@@ -810,7 +809,7 @@ void PaletteWindow::DrawEffectPicker(int player)
 		EffectPaint::SetEntry(player, entry, chosen);
 	}
 
-	if (EffectPaint::IsEdited(player, entry) && ImGui::Button("Back to the game's colour"))
+	if (EffectPaint::IsEdited(player, entry) && ImGui::Button("Use the game's colour"))
 		EffectPaint::ClearEntry(player, entry);
 }
 
@@ -881,7 +880,7 @@ void PaletteWindow::DrawFiles(int player)
 	DrawPngButtons(player);
 
 	if (!nameOk && side.name[0] != '\0')
-		ImGui::TextDisabled("that name cannot be a filename");
+		ImGui::TextDisabled("This name cannot be used as a file name.");
 	else if (side.status[0] != '\0')
 		ImGui::TextDisabled("%s", side.status);
 }
@@ -890,7 +889,7 @@ void PaletteWindow::DrawFileChooser(int player)
 {
 	Side& side = SideOf(player);
 
-	ImGui::TextUnformatted("Character Palette");
+	ImGui::TextUnformatted("Load palette");
 
 	const char* const chosen = side.chosen >= 0 && side.chosen < side.fileCount ? side.files[side.chosen].c_str()
 		: kDefaultPalette;
@@ -945,7 +944,7 @@ void PaletteWindow::DrawFileChooser(int player)
 
 	ImGui::SameLine();
 
-	if (ImGui::Button("Rescan"))
+	if (ImGui::Button("Refresh list"))
 		RefreshFiles(player);
 }
 
@@ -957,13 +956,13 @@ void PaletteWindow::DrawPngButtons(int player)
 	ImGui::BeginDisabled(importing);
 
 	if (ImGui::Button(importing ? "Importing..." : "Import PNG..."))
-		side.importDialog.BeginOpen("Import a palette PNG", "PNG images\0*.png\0");
+		side.importDialog.BeginOpen("Import palette PNG", "PNG images\0*.png\0");
 
 	ImGui::EndDisabled();
 
 	if (ImGui::IsItemHovered())
-		ImGui::SetTooltip("Applies an indexed PNG's own colour table straight to this palette. The PNG's entries have to "
-			"already line up with the game's. This does not requantize or reorder colours.");
+		ImGui::SetTooltip("Uses the colour table of an indexed PNG as this palette. The PNG colours must already be in "
+			"the game's order. Colours are not converted or reordered.");
 
 	ImGui::SameLine();
 
@@ -976,14 +975,14 @@ void PaletteWindow::DrawPngButtons(int player)
 	{
 		char suggested[96] = {};
 		sprintf_s(suggested, "%s.png", side.name[0] != '\0' ? side.name : Characters::Name(side.chara));
-		side.exportDialog.BeginSave("Export this palette as a picture", "PNG images\0*.png\0", suggested);
+		side.exportDialog.BeginSave("Export palette as PNG", "PNG images\0*.png\0", suggested);
 	}
 
 	ImGui::EndDisabled();
 
 	if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
-		ImGui::SetTooltip(hasBase ? "Paints these colours onto this character's reference sheet and writes it wherever "
-			"you choose." : "This palette has no reference sheet.");
+		ImGui::SetTooltip(hasBase ? "Paints these colours on this character's reference image and saves it where you "
+			"choose." : "This palette has no reference image.");
 }
 
 void PaletteWindow::Record(int player)
@@ -1079,7 +1078,7 @@ void PaletteWindow::Remove(int player)
 void PaletteWindow::Bare(int player)
 {
 	Remove(player);
-	sprintf_s(SideOf(player).status, "The game's own colours.");
+	sprintf_s(SideOf(player).status, "Using the game's colours.");
 }
 
 bool PaletteWindow::Save(int player)
@@ -1226,7 +1225,7 @@ void PaletteWindow::CompleteExportPng(int player, const std::string& path)
 
 	if (!BasePals::Get(side.chara, side.sub, base, size))
 	{
-		sprintf_s(side.status, "no reference sheet for this palette");
+		sprintf_s(side.status, "This palette has no reference image.");
 		return;
 	}
 
@@ -1282,7 +1281,7 @@ void PaletteWindow::Adopt(int player, int chara)
 		return;
 	}
 
-	sprintf_s(side.status, "'%s' could not be read", worn);
+	sprintf_s(side.status, "Could not read '%s'.", worn);
 }
 
 void PaletteWindow::PullBaseline(int player, bool force)

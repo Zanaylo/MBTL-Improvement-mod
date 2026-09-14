@@ -105,7 +105,7 @@ void BuildDescription()
 	}
 
 	sprintf_s(g_description, "Wine/Proton %s%s%s%s",
-		g_wineVersion[0] != '\0' ? g_wineVersion : "(version withheld)",
+		g_wineVersion[0] != '\0' ? g_wineVersion : "(version unknown)",
 		g_host[0] != '\0' ? " on " : "", g_host, rtss);
 }
 

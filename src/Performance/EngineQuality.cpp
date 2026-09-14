@@ -60,7 +60,7 @@ void Restore()
 {
 	if (!g_forcing)
 	{
-		g_status = "stage multisampling and FXAA left as the game has them";
+		g_status = "stage multisampling and FXAA use the game's settings";
 		return;
 	}
 
@@ -70,7 +70,7 @@ void Restore()
 	WriteByte(addresses.stageFxaa, g_userFxaa);
 	g_forcing = false;
 
-	SetStatus("stage multisampling and FXAA put back");
+	SetStatus("stage multisampling and FXAA restored");
 }
 
 }
@@ -113,7 +113,7 @@ void EngineQuality::Apply()
 
 	if (!IsAvailable())
 	{
-		g_status = "the stage multisampling switch was not found in this build";
+		g_status = "the stage multisampling setting was not found in this game version";
 		return;
 	}
 
@@ -122,12 +122,12 @@ void EngineQuality::Apply()
 
 	if (!HoldOff())
 	{
-		SetStatus("could not write the stage multisampling switch");
+		SetStatus("could not change the stage multisampling setting");
 		return;
 	}
 
 	g_forcing = true;
-	SetStatus("stage multisampling and FXAA held off");
+	SetStatus("stage multisampling and FXAA kept off");
 }
 
 void EngineQuality::OnFrame()

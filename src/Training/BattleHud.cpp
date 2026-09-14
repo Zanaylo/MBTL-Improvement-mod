@@ -19,7 +19,7 @@ namespace Cockpit = GameOffsets::Cockpit;
 
 uintptr_t g_global = 0;
 uintptr_t g_viewOffset = 0;
-const char* g_status = "the battle HUD switch was not found in this build";
+const char* g_status = "does not work in this game version";
 
 uintptr_t ResolveGlobal(const uint8_t* native)
 {

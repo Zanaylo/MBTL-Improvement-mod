@@ -150,7 +150,7 @@ void FrameMeterLegendWindow::Draw()
 	DrawSampleMeter();
 
 	ImGui::Spacing();
-	ImGui::SeparatorText("The bar");
+	ImGui::SeparatorText("Bar colours");
 
 	int placed = 0;
 
@@ -162,17 +162,17 @@ void FrameMeterLegendWindow::Draw()
 
 	ImGui::Spacing();
 	ImGui::SeparatorText("Status row");
-	ImGui::TextWrapped("Everything in force on that frame at once, the cell split evenly between them. White means "
-		"nothing can connect and is drawn on its own.");
+	ImGui::TextWrapped("Shows everything active on that frame, with the cell split evenly between them. White means "
+		"nothing can hit, and it is always drawn alone.");
 	MarkerEntries(FrameMeter::kFirstInvulnMarker, FrameMeter::Marker_COUNT);
 
 	ImGui::Spacing();
-	ImGui::SeparatorText("The numbers");
-	ImGui::BulletText("Startup: until the move can connect, first active frame included.");
-	ImGui::BulletText("Total: from the move starting to it ending.");
-	ImGui::BulletText("Advantage: who acts first, positive meaning you. The number in brackets is the advantage "
+	ImGui::SeparatorText("Numbers");
+	ImGui::BulletText("Startup: frames until the move can hit, including the first active frame.");
+	ImGui::BulletText("Total: frames from the start of the move to its end.");
+	ImGui::BulletText("Advantage: who can act first. Positive means you. The number in brackets is the advantage "
 		"before the opponent teched.");
-	ImGui::BulletText("Blockstun and hitstun: how long the opponent was held.");
-	ImGui::BulletText("Gap: free frames between two held runs.");
-	ImGui::BulletText("Flash: how long a super flash ran inside the move. The bar never gains a cell for it.");
+	ImGui::BulletText("Blockstun and hitstun: how long the opponent was stuck.");
+	ImGui::BulletText("Gap: free frames between two blockstun or hitstun runs.");
+	ImGui::BulletText("Flash: how long a super flash lasted during the move. The bar adds no cells for it.");
 }

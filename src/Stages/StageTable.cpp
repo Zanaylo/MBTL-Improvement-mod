@@ -131,7 +131,7 @@ private:
 };
 
 bool g_lifted = false;
-char g_status[224] = "the game's own 100 stage numbers";
+char g_status[224] = "The game's normal 100 stage numbers.";
 
 uint8_t* AsPointer(uintptr_t address)
 {
@@ -140,7 +140,7 @@ uint8_t* AsPointer(uintptr_t address)
 
 bool Refuse(const char* reason)
 {
-	sprintf_s(g_status, "left at the game's own 100: %s", reason);
+	sprintf_s(g_status, "Kept at the game's 100 stage numbers: %s.", reason);
 	LOG("StageTable: %s", g_status);
 	return false;
 }
@@ -531,7 +531,7 @@ bool Apply(const Plan& plan)
 	uint8_t* const caves = Allocate(kCaveBytes, PAGE_EXECUTE_READWRITE);
 
 	if (!table || !list || !builderArray || !pickerArray || !exclusionArray || !caves)
-		return Refuse("the wider tables could not be allocated");
+		return Refuse("no memory for the bigger table");
 
 	std::memcpy(list, AsPointer(plan.list), StageTable::kStockNumbers * kSlotBytes);
 
@@ -546,7 +546,7 @@ bool Apply(const Plan& plan)
 
 	if (static_cast<size_t>(done) != expected)
 	{
-		sprintf_s(g_status, "only %d of %u patch(es) took, so the stage table is in a mixed state", done,
+		sprintf_s(g_status, "Only %d of %u patch(es) worked, so the stage table may not work.", done,
 			static_cast<unsigned>(expected));
 		LOG("StageTable: %s", g_status);
 		return false;
@@ -563,14 +563,14 @@ bool Apply(const Plan& plan)
 bool StageTable::Initialize()
 {
 	if (!ImageScanner::Initialize())
-		return Refuse("MBTL.exe could not be read");
+		return Refuse("could not read MBTL.exe");
 
 	const uint8_t* const parser = Only(ImageScanner::FunctionsReferencing(ImageScanner::FindString(Stages::kListAnchor)));
 
 	Plan plan;
 
 	if (!parser || !FindTables(parser, plan))
-		return Refuse("the BgList parser was not recognised");
+		return Refuse("the stage list reader was not found in this game version");
 
 	Anchors::Record("Stage table", plan.table);
 	Anchors::Record("Stage select list", plan.list);
@@ -579,20 +579,20 @@ bool StageTable::Initialize()
 	plan.listSites = ImageScanner::FindReferencesTo(AsPointer(plan.list));
 
 	if (!FindBounds(plan) || !FindArrays(plan))
-		return Refuse("the stage accessors were not recognised");
+		return Refuse("the stage table code was not found in this game version");
 
 	char reason[224] = {};
 	const bool valid = Validate(plan, reason, sizeof(reason));
 	LOG("StageTable: %s", reason);
 
 	if (!valid)
-		return Refuse("this build reads the stage table in ways the mod does not recognise");
+		return Refuse("this game version uses the stage table in a way the mod does not know");
 
 	if (!Apply(plan))
 		return false;
 
 	g_lifted = true;
-	sprintf_s(g_status, "extension table on: %d stage numbers and %d picker entries", kWideNumbers, kWideNumbers);
+	sprintf_s(g_status, "Extension table on: %d stage numbers and %d picker slots.", kWideNumbers, kWideNumbers);
 	LOG("StageTable: %s", g_status);
 	return true;
 }

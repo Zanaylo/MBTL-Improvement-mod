@@ -26,20 +26,19 @@ struct Preset
 constexpr Preset kPresets[PotatoMode::Level_COUNT] = {
 	{
 		"Off",
-		"Everything as the game ships it, at whatever its own display option asks for.",
+		"No changes. The game draws at its own display setting.",
 		0, 0, false, false, false, false,
 	},
 	{
 		"Balanced",
-		"Draws at 960x540 and stretches that up, drops the back buffer's anti-aliasing and waits on the input "
-		"handshake instead of on the clock. In exclusive fullscreen the back buffer can only be a size the monitor "
-		"lists, so the nearest listed one is used. Slightly soft.",
+		"Draws at 960x540 and stretches it up, turns off back buffer multisampling and uses the precise frame "
+		"pause. In exclusive fullscreen the nearest monitor mode is used. Slightly soft.",
 		960, 540, false, true, true, false,
 	},
 	{
 		"Potato",
-		"Draws at the size chosen below and stretches that up, whatever the window or the monitor is, and turns off "
-		"the stage's multisampling and FXAA. Visibly soft, and the stage still draws.",
+		"Draws at the size you pick below and stretches it up, and turns off the stage's multisampling and FXAA. "
+		"Clearly soft, but the stage is still drawn.",
 		0, 0, true, true, true, true,
 	},
 };

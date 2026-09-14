@@ -30,7 +30,7 @@ constexpr DWORD kRefreshIntervalMs = 250;
 constexpr double kFrameMs = 1000.0 / 60.0;
 constexpr const char* kVideo = "Video";
 constexpr const char* kGraphics = "Graphics";
-constexpr const char* kAutomatic = "Automatic (keep the desktop's own mode)";
+constexpr const char* kAutomatic = "Automatic (same as the desktop)";
 
 const ImVec4 kGoodColour(0.45f, 0.80f, 0.50f, 1.0f);
 const ImVec4 kWarnColour(0.95f, 0.55f, 0.45f, 1.0f);
@@ -53,27 +53,25 @@ const Option kOptions[] = {
 		"TimerResolution",
 		"Keep the Windows timer at 1 ms",
 		"Fixes the slowdown Alt+Tab leaves behind. No downside.",
-		"Since Windows 10 version 2004, a 1 ms timer request only counts while its program is in the foreground. "
-		"After Alt+Tab every sleep can last 15.6 ms instead of 1. This keeps the request and renews it when the "
-		"window comes back.",
+		"After Alt+Tab, Windows can make each short pause in the game last 15.6 ms instead of 1 ms. This keeps "
+		"the 1 ms timer on, even after the window loses focus and comes back.",
 	},
 	{
 		&g_settings.powerThrottlingOptOut,
 		"PowerThrottlingOptOut",
-		"Stop Windows throttling the game in the background",
-		"The other half of the same fix. Costs a little power out of focus.",
-		"Windows EcoQoS moves background programs to the slow cores and limits their timer. Opting out keeps the "
-		"game on the fast cores and keeps the 1 ms timer above.",
+		"Stop Windows slowing the game in the background",
+		"Goes with the option above. Uses a little more power while the game is in the background.",
+		"Windows moves background programs to slower CPU cores and limits their timer. This keeps the game on the "
+		"fast cores and keeps the 1 ms timer working.",
 	},
 	{
 		&g_settings.pumpWait,
 		"PumpWait",
-		"Keep the game's frame sleep on a precise timer",
-		"The sleep after each Present lasts one millisecond, not fifteen. No CPU cost.",
-		"MBTL runs its window, simulation and drawing on one thread, which sleeps for 1 ms after every Present. "
-		"After Alt+Tab, Windows can stretch that sleep to 15.6 ms, which drops a frame.\n\nThis moves every 1 and "
-		"2 ms sleep in the game to a precise timer that Windows does not stretch. No CPU cost, no game code "
-		"patched, and it turns off cleanly.",
+		"Use a precise timer for the frame pause",
+		"The short pause after each frame lasts 1 ms, not 15 ms. No CPU cost.",
+		"The game pauses for 1 ms after every frame. After Alt+Tab, Windows can stretch that pause to 15.6 ms, "
+		"which drops a frame.\n\nThis moves the game's short pauses to a precise timer that Windows does not "
+		"stretch. No CPU cost, and no game code is changed.",
 	},
 };
 
@@ -156,7 +154,7 @@ void OnTargetRow(const Profiler::Stats& now, const Profiler::Stats& before, bool
 {
 	ImGui::TableNextRow();
 	ImGui::TableNextColumn();
-	ImGui::TextUnformatted("Within half a ms of 16.67");
+	ImGui::TextUnformatted("Within 0.5 ms of 16.67 ms");
 
 	BaselineCell(hasBaseline, "%.0f%%", before.onTargetPercent);
 
@@ -211,11 +209,11 @@ void DrawIntervalTable(const char* title, const Profiler::Stats& now, const Prof
 
 	if (withSpread)
 	{
-		StatRow("Spread (standard deviation)", now.stddevMs, before.stddevMs, hasBaseline);
-		StatRow("Off target, average", now.madMs, before.madMs, hasBaseline);
+		StatRow("Spread", now.stddevMs, before.stddevMs, hasBaseline);
+		StatRow("Average miss", now.madMs, before.madMs, hasBaseline);
 	}
 
-	StatRow("99th percentile", now.p99Ms, before.p99Ms, hasBaseline);
+	StatRow("Slowest 1%", now.p99Ms, before.p99Ms, hasBaseline);
 	StatRow("Worst", now.maxMs, before.maxMs, hasBaseline);
 	StatRow("Average", now.averageMs, before.averageMs, hasBaseline);
 
@@ -247,8 +245,8 @@ void DrawFineHistogram()
 	DrawHistogram(&Profiler::GetFineHistogramBucket, Profiler::kFineBuckets, "##fineinterval");
 
 	const double base = Profiler::GetFineHistogramBaseMs();
-	UiText::Muted("The same frames in quarter-millisecond buckets from %.2f to %.2f ms. Smooth is one spike in the "
-		"middle. Two spikes either side of it is judder, and it is invisible to the median.", base,
+	UiText::Muted("The same frames in 0.25 ms steps, from %.2f to %.2f ms. One spike in the middle means smooth. "
+		"Two spikes, one on each side, means judder (the median does not show it).", base,
 		base + Profiler::kFineBuckets * Profiler::kFineBucketMs);
 
 	double firstMs = 0.0;
@@ -258,15 +256,15 @@ void DrawFineHistogram()
 	if (!Profiler::FindModes(firstMs, secondMs, separationMs))
 		return;
 
-	Warn("Two clusters, %.2f ms and %.2f ms, %.2f ms apart. Frames are landing either side of the target rather "
-		"than on it.", firstMs, secondMs, separationMs);
+	Warn("Two groups: %.2f ms and %.2f ms (%.2f ms apart). Frames land on both sides of the target, not on it. "
+		"This is judder.", firstMs, secondMs, separationMs);
 }
 
 void DrawSections(bool hasBaseline)
 {
-	ImGui::SeparatorText("Where the time in a frame goes");
-	Muted("The mod's own work in milliseconds, averaged over recent frames. oPresent and oBattleTick are the game "
-		"itself, for comparison.");
+	ImGui::SeparatorText("Time spent per frame");
+	Muted("Time the mod spends on each task, in ms, averaged over recent frames. oPresent and oBattleTick are the "
+		"game's own work, for comparison.");
 
 	if (!ImGui::BeginTable("##sections", 4, kTableFlags))
 		return;
@@ -386,7 +384,7 @@ bool DrawRefreshCombo()
 
 	Ui::SetItemWidth(320.0f);
 
-	if (!ImGui::BeginCombo("Fullscreen refresh", preview))
+	if (!ImGui::BeginCombo("Fullscreen refresh rate", preview))
 		return false;
 
 	bool changed = false;
@@ -419,8 +417,8 @@ bool DrawRefreshCombo()
 
 void DrawSceneTargetNote()
 {
-	UiText::Muted("The characters and the stage are drawn into a %dx%d scene target first and stretched afterwards, "
-		"so they gain no detail beyond that size.", GameOffsets::Render::kSceneWidth, GameOffsets::Render::kSceneHeight);
+	UiText::Muted("The game draws the characters and the stage at %dx%d, then stretches them. They get no extra "
+		"detail above that size.", GameOffsets::Render::kSceneWidth, GameOffsets::Render::kSceneHeight);
 }
 
 }
@@ -486,8 +484,8 @@ void PerformanceWindow::DrawWhatIsHappening()
 
 	if (present.BackBufferWidth == 0)
 	{
-		Warn("No Direct3D device found. Something else is wrapping Direct3D, and none of the display settings "
-			"below are in force.");
+		Warn("No Direct3D device found. Another program is wrapping Direct3D, so the display settings below do "
+			"nothing.");
 		return;
 	}
 
@@ -507,18 +505,18 @@ void PerformanceWindow::DrawWhatIsHappening()
 	if (ShouldRefresh(stateTick))
 		fps = Profiler::IsEnabled() ? Profiler::GetPresentedFps() : ImGui::GetIO().Framerate;
 
-	ImGui::Text("Presenting %.1f frames a second", fps);
+	ImGui::Text("Running at %.1f frames per second", fps);
 
 	if (g_settings.pumpWait)
-		ImGui::Text("Precise frame sleep %s", PumpWait::IsActive() ? "in force" : "not in force");
+		ImGui::Text("Precise frame pause: %s", PumpWait::IsActive() ? "active" : "not active");
 
 	if (present.Windowed)
-		Muted("Windowed, the desktop compositor owns the presentation, so the display settings below do nothing.");
+		Muted("In windowed mode Windows controls how frames are shown, so the display settings below do nothing.");
 
 	if (!present.Windowed && VsyncIsOn(present) && present.FullScreen_RefreshRateInHz % 60 != 0)
 	{
-		Warn("%u Hz cannot show 60 frames a second evenly, so with vsync on they land alternately early and late. "
-			"Pick a refresh below that divides by 60, or turn the game's vsync off.",
+		Warn("%u Hz cannot show 60 fps evenly, so with vsync on the game judders. Pick a refresh rate below that "
+			"divides by 60, or turn off the game's vsync.",
 			present.FullScreen_RefreshRateInHz);
 	}
 }
@@ -561,40 +559,40 @@ bool PerformanceWindow::DrawDisplayGroup()
 
 	ImGui::BeginDisabled(windowed);
 
-	if (ImGui::Checkbox("Let the mod choose the display parameters", &g_settings.displayTuning))
+	if (ImGui::Checkbox("Let the mod pick the display settings", &g_settings.displayTuning))
 	{
 		SaveVideo("DisplayTuning", g_settings.displayTuning);
 		changed = true;
 	}
 
-	Help("When off, the refresh rate and back buffer count stay exactly as the game asked Direct3D for them.");
+	Help("When off, the refresh rate and the number of back buffers stay as the game sets them.");
 
 	ImGui::BeginDisabled(!g_settings.displayTuning);
 
 	changed = DrawRefreshCombo() || changed;
 
-	Help("With the game's vsync off, the refresh rate only changes how fast a frame reaches the screen. Keeping "
-		"the desktop's own mode is the fastest option and the quickest to Alt+Tab out of.\n\nWith vsync on and a "
-		"rate that does not divide by 60, frames land unevenly. Automatic picks the highest listed rate that "
-		"divides by 60.\n\nRestart the game to apply.");
+	Help("With the game's vsync off, the refresh rate only changes how fast a frame reaches the screen. Automatic "
+		"is the fastest and the quickest to Alt+Tab out of.\n\nWith vsync on, use a rate that divides by 60, or "
+		"the game judders. Automatic then picks the highest rate that divides by 60.\n\nRestart the game to "
+		"apply.");
 
 	ImGui::BeginDisabled(!vsync);
 
-	if (ImGui::Checkbox("A second back buffer", &g_settings.extraBackBuffer))
+	if (ImGui::Checkbox("Extra back buffer", &g_settings.extraBackBuffer))
 	{
 		SaveVideo("ExtraBackBuffer", g_settings.extraBackBuffer);
 		changed = true;
 	}
 
-	Help("A second buffer lets a late frame wait instead of costing a whole refresh. It adds up to one frame of "
-		"input lag.\n\nIt only matters with vsync on. With vsync off it just adds one queued frame of delay.");
+	Help("Lets a late frame wait instead of skipping a whole refresh. Adds up to one frame of input lag.\n\nOnly "
+		"useful with vsync on. With vsync off it only adds delay.");
 
 	ImGui::EndDisabled();
 
 	if (!vsync)
 	{
 		ImGui::Indent();
-		Muted("Greyed out because the game's vsync is off, where a second buffer is pure latency.");
+		Muted("Greyed out: the game's vsync is off, so an extra buffer would only add lag.");
 		ImGui::Unindent();
 	}
 
@@ -602,10 +600,7 @@ bool PerformanceWindow::DrawDisplayGroup()
 	ImGui::EndDisabled();
 
 	if (windowed)
-	{
-		Muted("Greyed out because the game is windowed. Direct3D requires a zero refresh rate there, and the "
-			"compositor already holds a frame of its own.");
-	}
+		Muted("Greyed out: the game is windowed, and Windows controls the refresh rate and buffers there.");
 
 	return changed;
 }
@@ -617,16 +612,16 @@ bool PerformanceWindow::DrawAdvanced()
 
 	ImGui::BeginDisabled(!g_settings.pumpWait);
 
-	const bool changed = ImGui::Checkbox("End the frame sleep as soon as input arrives", &g_settings.pumpWaitAllInput);
+	const bool changed = ImGui::Checkbox("End the frame pause as soon as input arrives", &g_settings.pumpWaitAllInput);
 
 	ImGui::EndDisabled();
 
 	if (changed)
 		SaveVideo("PumpWaitAllInput", g_settings.pumpWaitAllInput);
 
-	Help("The game reads input at the start of each frame. Waking up as soon as a keyboard or mouse message "
-		"arrives lets that read happen up to a millisecond sooner. The game still runs at 60 frames a second. Uses "
-		"more CPU the more you move the mouse. Needs the option above turned on.");
+	Help("The game reads input at the start of each frame. Ending the pause as soon as a key or mouse input "
+		"arrives lets the game read it up to 1 ms sooner. The game still runs at 60 fps. Uses more CPU the more "
+		"you move the mouse. Needs \"Use a precise timer for the frame pause\" turned on.");
 
 	return changed;
 }
@@ -645,20 +640,20 @@ bool PerformanceWindow::DrawPresets()
 
 	if (ImGui::IsItemHovered())
 	{
-		ImGui::SetTooltip("Everything above on, the display left as the desktop has it, and the game's own single "
-			"back buffer. Nothing here costs a core.");
+		ImGui::SetTooltip("Turns on every option above, keeps the desktop's display mode and uses one back buffer. "
+			"None of it uses extra CPU.");
 	}
 
 	ImGui::SameLine();
 
-	if (ImGui::Button("As the game ships"))
+	if (ImGui::Button("Game default"))
 	{
 		ApplyPreset(false, false, false, false);
 		changed = true;
 	}
 
 	if (ImGui::IsItemHovered())
-		ImGui::SetTooltip("Everything off. This is the thing to measure against.");
+		ImGui::SetTooltip("Turns everything off. Measure this first, so you have something to compare against.");
 
 	return changed;
 }
@@ -666,11 +661,11 @@ bool PerformanceWindow::DrawPresets()
 void PerformanceWindow::DrawPerformanceTab()
 {
 	ImGui::Spacing();
-	ImGui::SeparatorText("What is actually happening");
+	ImGui::SeparatorText("Current state");
 	DrawWhatIsHappening();
 
 	ImGui::Spacing();
-	ImGui::SeparatorText("Choices");
+	ImGui::SeparatorText("Options");
 
 	bool changed = DrawOptions();
 
@@ -695,8 +690,8 @@ void PerformanceWindow::DrawPotatoTab()
 {
 	ImGui::Spacing();
 
-	Muted("Every level here changes how the frame is drawn and nothing else. None of them reaches the simulation, "
-		"none of them is visible to an opponent, and the stage keeps drawing at all of them.");
+	Muted("These levels only change how the game is drawn. They do not affect gameplay, your opponent cannot see "
+		"them, and the stage is still drawn.");
 
 	ImGui::Spacing();
 
@@ -722,15 +717,15 @@ void PerformanceWindow::DrawPotatoTab()
 
 	ImGui::Spacing();
 
-	Muted("The drawing size takes effect the next time the game builds its display. Restart it, or change any video "
-		"option in its own menu. Everything else is immediate. In exclusive fullscreen the back buffer has to name "
-		"a mode your monitor really has, so the size is rounded up to the smallest listed one that fits.");
+	Muted("A new drawing size needs a game restart, or a change to any video option in the game's menu. Everything "
+		"else applies at once. In exclusive fullscreen the size is rounded up to the nearest mode your monitor "
+		"supports.");
 
 	ImGui::Spacing();
 	changed = DrawEmptyStage() || changed;
 
 	ImGui::Spacing();
-	ImGui::SeparatorText("In force now");
+	ImGui::SeparatorText("Active now");
 	DrawPotatoState();
 
 	if (!changed)
@@ -744,7 +739,7 @@ bool PerformanceWindow::DrawEmptyStage()
 	const bool available = StageColor::IsAvailable();
 
 	ImGui::BeginDisabled(!available);
-	const bool changed = ImGui::Checkbox("Draw the empty stage", &g_settings.simpleStage);
+	const bool changed = ImGui::Checkbox("Black background (hide the stage)", &g_settings.simpleStage);
 	ImGui::EndDisabled();
 
 	if (changed)
@@ -758,8 +753,7 @@ bool PerformanceWindow::DrawEmptyStage()
 
 	if (available)
 	{
-		Muted("Deliberately not part of any level above: a match with no background is a worse trade than a soft "
-			"one. Here for a machine that still cannot hold 60 on Potato.");
+		Muted("Not part of any level above. Use it only if your PC still cannot hold 60 fps on Potato.");
 	}
 	else
 	{
@@ -777,10 +771,10 @@ void PerformanceWindow::DrawImprovementsTab()
 	bool changed = GraphicsPanel::DrawEverythingOff();
 
 	ImGui::SameLine();
-	Muted("POTATO MODE the other way round: the frame is drawn larger than your window and fitted back down.");
+	Muted("The opposite of POTATO MODE: the game is drawn bigger than your window, then shrunk to fit.");
 
 	ImGui::Spacing();
-	ImGui::SeparatorText("Present size");
+	ImGui::SeparatorText("Drawing size");
 
 	const int level = Improvements::GetLevel();
 
@@ -796,14 +790,15 @@ void PerformanceWindow::DrawImprovementsTab()
 		changed = true;
 	}
 
-	Help("Supersamples everything drawn straight to the back buffer: the HUD, the menus and this overlay. Windowed "
-		"mode only. Takes effect after a restart. It costs GPU time: 4K is nine times the pixels of 720p.");
+	Help("Draws the HUD, the menus and this overlay at a higher resolution and shrinks them to fit, so they look "
+		"sharper. Windowed mode only. Restart the game to apply. Costs GPU time: 4K has nine times the pixels of "
+		"720p.");
 
 	UiText::Muted("%s", Improvements::Describe(Improvements::GetLevel()));
 	DrawSceneTargetNote();
 
 	ImGui::Spacing();
-	ImGui::SeparatorText("In force now");
+	ImGui::SeparatorText("Active now");
 	DrawPotatoState();
 
 	if (!changed)
@@ -847,7 +842,7 @@ void PerformanceWindow::DrawPotatoState()
 
 	if (g_settings.presentWidth <= 0 || g_settings.presentHeight <= 0)
 	{
-		ImGui::Text("Drawing at %ux%u, which is the game's own display option", present.BackBufferWidth,
+		ImGui::Text("Drawing at %ux%u (the game's own display setting)", present.BackBufferWidth,
 			present.BackBufferHeight);
 	}
 	else
@@ -860,37 +855,34 @@ void PerformanceWindow::DrawPotatoState()
 
 		if (exact)
 		{
-			ImGui::TextColored(kGoodColour, "Drawing at %ux%u and %s it to the window", present.BackBufferWidth,
-				present.BackBufferHeight, DeviceHooks::OverlayScale() > 1.0f ? "fitting" : "stretching");
+			ImGui::TextColored(kGoodColour, "Drawing at %ux%u and %s it to fit the window", present.BackBufferWidth,
+				present.BackBufferHeight, DeviceHooks::OverlayScale() > 1.0f ? "shrinking" : "stretching");
 		}
 		else if (rounded)
 		{
-			ImGui::TextColored(kGoodColour, "Drawing at %ux%u, the smallest mode your monitor lists at or above the "
-				"%dx%d asked for", present.BackBufferWidth, present.BackBufferHeight, g_settings.presentWidth,
+			ImGui::TextColored(kGoodColour, "Drawing at %ux%u, the nearest monitor mode at or above the %dx%d you "
+				"picked", present.BackBufferWidth, present.BackBufferHeight, g_settings.presentWidth,
 				g_settings.presentHeight);
 		}
 		else
 		{
-			Warn("Asked to draw at %dx%d, still drawing at %ux%u. The display is built once. Restart the game, or "
-				"change any video option in its own menu.", g_settings.presentWidth, g_settings.presentHeight,
+			Warn("You picked %dx%d, but the game still draws at %ux%u. Restart the game, or change any video option "
+				"in the game's menu.", g_settings.presentWidth, g_settings.presentHeight,
 				present.BackBufferWidth, present.BackBufferHeight);
 		}
 	}
 
 	if (!present.Windowed)
-	{
-		Muted("Exclusive fullscreen: the size names a real display mode, so your monitor changes mode rather than "
-			"the picture being stretched inside a window.");
-	}
+		Muted("Exclusive fullscreen: your monitor switches to this resolution instead of stretching the picture.");
 
-	ImGui::Text("Back buffer multisampling %s", present.MultiSampleType == D3DMULTISAMPLE_NONE ? "off" : "on");
+	ImGui::Text("Back buffer multisampling: %s", present.MultiSampleType == D3DMULTISAMPLE_NONE ? "off" : "on");
 
 	bool stageEffects = false;
 
 	if (!EngineQuality::IsAvailable() || !EngineQuality::ReadStageEffects(stageEffects))
 		return;
 
-	ImGui::Text("%s is %s", EngineQuality::LeverName(), stageEffects ? "on" : "off");
+	ImGui::Text("%s: %s", EngineQuality::LeverName(), stageEffects ? "on" : "off");
 
 	if (stageEffects && !EngineQuality::WantsStageEffects())
 		Warn("It should be off. %s", EngineQuality::GetStatusText());
@@ -907,13 +899,13 @@ void PerformanceWindow::DrawMetricsTab()
 		Settings::SaveBool("Debug", "Profiler", measuring);
 	}
 
-	Help("Measures the time between frames, how long Present blocks, and each step of the mod's own work. Off by "
-		"default, so it costs nothing when you are not measuring.");
+	Help("Measures the time between frames, how long each frame waits to be shown, and how long the mod's own work "
+		"takes. Costs nothing while off.");
 
 	if (!measuring)
 	{
 		ImGui::Spacing();
-		Muted("Nothing is being measured. Switch Measure on and play for a few seconds.");
+		Muted("Nothing is measured yet. Turn on Measure and play for a few seconds.");
 		return;
 	}
 
@@ -939,32 +931,31 @@ void PerformanceWindow::DrawMetricsTab()
 		tickBaseline = Profiler::GetBaselineTickStats();
 	}
 
-	ImGui::Text("Presenting %.1f frames a second", fps);
+	ImGui::Text("Running at %.1f frames per second", fps);
 
 	ImGui::Spacing();
-	DrawIntervalTable("Frame interval", frame, frameBaseline, hasBaseline, true);
-	Muted("The gap between one finished frame and the next, which is what smoothness is. Median is the typical "
-		"frame; the spread and the off-target average are the judder. Frames over 20 ms are dropped frames.");
+	DrawIntervalTable("Time between frames", frame, frameBaseline, hasBaseline, true);
+	Muted("The time from one frame to the next. This is what smoothness is. Median is the typical frame. Spread "
+		"and Average miss show judder. Frames over 20 ms are dropped frames.");
 
 	ImGui::Spacing();
-	ImGui::SeparatorText("Frame interval, close up");
+	ImGui::SeparatorText("Time between frames, close up");
 	DrawFineHistogram();
 
 	ImGui::Spacing();
-	ImGui::SeparatorText("Frame interval, whole range");
+	ImGui::SeparatorText("Time between frames, full range");
 	DrawHistogram(&Profiler::GetHistogramBucket, Profiler::kHistogramBuckets, "##frameinterval");
-	Muted("Every frame since the last reset, in 1 ms buckets from 0 to 40 ms. A dropped frame shows up as a tail to "
-		"the right.");
+	Muted("Every frame since the last reset, in 1 ms steps from 0 to 40 ms. Dropped frames show up as bars on the "
+		"right.");
 
 	ImGui::Spacing();
-	DrawIntervalTable("Present", block, Profiler::Stats(), false, false);
-	Muted("How long the call that hands the frame to the driver takes. With vsync on this is the wait for the "
-		"vblank, and two clusters here are a display that cannot divide 60 evenly.");
+	DrawIntervalTable("Time to hand a frame to the driver", block, Profiler::Stats(), false, false);
+	Muted("With vsync on, this is the wait for the monitor. Two groups here mean the refresh rate does not divide "
+		"by 60.");
 
 	ImGui::Spacing();
-	DrawIntervalTable("Battle tick", tick, tickBaseline, hasBaseline, false);
-	Muted("The gap between two runs of the battle simulation. Only runs during a match, and reads zero while frame "
-		"stepping has the game paused.");
+	DrawIntervalTable("Time between battle updates", tick, tickBaseline, hasBaseline, false);
+	Muted("Only counts during a match. Reads zero while the game is paused for frame stepping.");
 
 	ImGui::Spacing();
 	DrawInputLag(block.medianMs);
@@ -983,44 +974,44 @@ void PerformanceWindow::DrawInputLag(double presentBlockMs)
 
 	if (!InputLagMeter::IsAvailable())
 	{
-		ImGui::TextDisabled("The character's input field has not been found, so nothing is measured.");
+		ImGui::TextDisabled("Cannot measure: the game's input data was not found.");
 	}
 	else if (InputLagMeter::GetAverageMs() > 0.0f)
 	{
 		const float average = InputLagMeter::GetAverageMs();
 
-		ImGui::Text("%.1f ms average over %d trusted samples (%.1f frames), last %.1f ms", average,
+		ImGui::Text("Average %.1f ms from %d good samples (%.1f frames). Last: %.1f ms", average,
 			InputLagMeter::GetTrustedCount(), average / kFrameMs, InputLagMeter::GetLastMs());
 	}
 	else
 	{
-		ImGui::TextDisabled("Start a match and press something as player 1 to measure.");
+		ImGui::TextDisabled("Start a match and press a button as player 1 to measure.");
 	}
 
-	Muted("Measured from a physical press to the character's own input field changing, so it is the half of the "
-		"delay the simulation can see. It cannot see the swap chain or the scan out, because Direct3D 9 without the Ex "
-		"interfaces reports neither. The display half below is estimated, not measured.");
+	Muted("Measured from your button press until the game reads it. This is only the game's part of the delay. "
+		"Direct3D 9 cannot report when the frame reaches the screen, so the display part below is an estimate.");
 
 	const D3DPRESENT_PARAMETERS& present = DeviceHooks::GetPresentParameters();
 	const double refreshMs = present.FullScreen_RefreshRateInHz != 0 ? 1000.0 / present.FullScreen_RefreshRateInHz
 		: kFrameMs;
 
-	ImGui::Text("Display side, estimated: %.1f ms", presentBlockMs + present.BackBufferCount * refreshMs);
+	ImGui::Text("Display part (estimate): %.1f ms", presentBlockMs + present.BackBufferCount * refreshMs);
 }
 
 void PerformanceWindow::DrawBaseline(bool hasBaseline)
 {
 	ImGui::SeparatorText("Before and after");
 
-	Muted("Turn Measure on. Go to training mode, same character, same corner. Play thirty seconds. Press Capture "
-		"baseline. Change one thing. Play the same thirty seconds. Read the Change column, then Copy summary.");
+	Muted("To compare: turn on Measure. In training mode, play 30 seconds with the same character in the same "
+		"corner. Press Capture baseline. Change one setting. Play the same 30 seconds again. Check the Change "
+		"column, then press Copy summary.");
 
 	if (hasBaseline)
 		ImGui::Text("Baseline: %s", Profiler::GetBaselineLabel());
 	else
 		ImGui::TextDisabled("No baseline captured yet.");
 
-	ImGui::Text("Live sample: %d frames", Profiler::GetSampleCount());
+	ImGui::Text("Frames measured: %d", Profiler::GetSampleCount());
 
 	if (ImGui::Button("Capture baseline"))
 	{
@@ -1038,7 +1029,7 @@ void PerformanceWindow::DrawBaseline(bool hasBaseline)
 
 	ImGui::SameLine();
 
-	if (ImGui::Button("Reset live"))
+	if (ImGui::Button("Restart measuring"))
 	{
 		Profiler::Reset();
 		InputLagMeter::Reset();

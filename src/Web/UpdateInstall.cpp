@@ -108,7 +108,7 @@ bool ValidateZip(const std::string& path, std::string& outError)
 
 	if (!ZipArchive::List(path, names))
 	{
-		outError = "the downloaded file is not a zip";
+		outError = "the download is not a zip";
 		return false;
 	}
 
@@ -121,7 +121,7 @@ bool ValidateZip(const std::string& path, std::string& outError)
 
 		if (!IsAllowedEntry(name))
 		{
-			outError = "the release zip carries '" + name + "', which this updater will not install";
+			outError = "the update zip holds a file that is not allowed: '" + name + "'";
 			return false;
 		}
 
@@ -130,7 +130,7 @@ bool ValidateZip(const std::string& path, std::string& outError)
 
 	if (!hasDll)
 	{
-		outError = "the release zip has no " MBTL_IM_ENTRY_DLL;
+		outError = "the update zip has no " MBTL_IM_ENTRY_DLL;
 		return false;
 	}
 
@@ -184,7 +184,7 @@ bool WriteHandoff(const GitHubRelease::Release& release, const std::string& stag
 
 	if (!CreateDirectoryTree(folder))
 	{
-		outError = "the handoff folder could not be created";
+		outError = "could not prepare the install (folder)";
 		return false;
 	}
 
@@ -207,7 +207,7 @@ bool WriteHandoff(const GitHubRelease::Release& release, const std::string& stag
 
 	if (fopen_s(&file, outPath.c_str(), "wb") != 0 || file == nullptr)
 	{
-		outError = "the handoff file could not be written";
+		outError = "could not prepare the install (file)";
 		return false;
 	}
 
@@ -215,7 +215,7 @@ bool WriteHandoff(const GitHubRelease::Release& release, const std::string& stag
 	fclose(file);
 
 	if (!ok)
-		outError = "the handoff file could not be written";
+		outError = "could not prepare the install (file)";
 
 	return ok;
 }
@@ -238,13 +238,13 @@ bool PrepareFolders(const std::string& stage, const std::string& downloads, Web:
 		return true;
 	}
 
-	job.SetError("the updater folders could not be created");
+	job.SetError("could not create the updater folders");
 	return false;
 }
 
 bool FetchPackage(const GitHubRelease::Asset& package, const std::string& archive, Web::Job& job)
 {
-	job.SetStep("downloading the release");
+	job.SetStep("downloading the update");
 	job.SetSource(package.url);
 
 	std::string error;
@@ -286,13 +286,13 @@ bool VerifyPackage(const GitHubRelease::Release& release, const GitHubRelease::A
 		return true;
 
 	DeleteFileA(archive.c_str());
-	job.SetError("the download does not match the release checksum");
+	job.SetError("the download is damaged (checksum does not match). Try again");
 	return false;
 }
 
 bool StagePackage(const std::string& archive, const std::string& stage, Web::Job& job)
 {
-	job.SetStep("checking the package");
+	job.SetStep("checking the files");
 
 	std::string error;
 
@@ -316,15 +316,15 @@ bool StagePackage(const std::string& archive, const std::string& stage, Web::Job
 
 	if (!Exists(Combine(stage, MBTL_IM_ENTRY_DLL)))
 	{
-		job.SetError("the package did not unpack a " MBTL_IM_ENTRY_DLL);
+		job.SetError(MBTL_IM_ENTRY_DLL " is missing after unpacking");
 		return false;
 	}
 
 	if (Exists(UpdaterPath(stage)))
 		return true;
 
-	job.SetError("no " MBTL_IM_UPDATER_EXE " to run the install. Download the release and "
-		"unzip it beside " MBTL_IM_GAME_EXE " yourself");
+	job.SetError(MBTL_IM_UPDATER_EXE " is missing. Download the release and unzip it next to "
+		MBTL_IM_GAME_EXE " yourself");
 	return false;
 }
 
@@ -334,7 +334,7 @@ bool RunJob(Web::Job& job)
 
 	if (!UpdateCheck::CopyRelease(release))
 	{
-		job.SetError("no release has been read yet");
+		job.SetError("check for updates first");
 		return false;
 	}
 
@@ -342,7 +342,7 @@ bool RunJob(Web::Job& job)
 
 	if (package == nullptr)
 	{
-		job.SetError("that release carries no zip to install");
+		job.SetError("that release has no zip to install");
 		return false;
 	}
 
@@ -447,7 +447,7 @@ void UpdateInstall::OnFrame()
 
 	if (!LaunchUpdater())
 	{
-		g_job.SetError("the updater would not start. Install the release by hand");
+		g_job.SetError("the updater did not start. Install the update by hand");
 		return;
 	}
 

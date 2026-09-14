@@ -7,7 +7,7 @@
 class HooksDebugSection : public IDebugSection
 {
 public:
-	const char* Title() const override { return "Anchors and hooks"; }
+	const char* Title() const override { return "Game addresses and hooks"; }
 	void Draw() override;
 };
 

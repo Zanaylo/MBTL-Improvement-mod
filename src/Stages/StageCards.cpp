@@ -45,11 +45,11 @@ constexpr uint8_t kNop = 0x90;
 constexpr size_t kNewQuotientAt = 16;
 
 bool g_patched = false;
-char g_status[160] = "the stage picker keeps the game's own 42 cards";
+char g_status[160] = "The stage picker uses only the game's 42 cards.";
 
 void Refuse(const char* reason)
 {
-	sprintf_s(g_status, "the stage picker keeps the game's own 42 cards: %s", reason);
+	sprintf_s(g_status, "The stage picker uses only the game's 42 cards: %s.", reason);
 	LOG("StageCards: %s", g_status);
 }
 
@@ -150,7 +150,7 @@ void StageCards::Install()
 	if (!loader || !SheetSlot(loader, length, Cards::kFirstSheetAnchor, first) ||
 		!SheetSlot(loader, length, Cards::kSecondSheetAnchor, second) || second != first)
 	{
-		Refuse("the sheet loader was not recognised");
+		Refuse("the card sheet code was not found");
 		return;
 	}
 
@@ -161,7 +161,7 @@ void StageCards::Install()
 	if (sites.size() != 1)
 	{
 		char reason[64] = {};
-		sprintf_s(reason, "%u card split(s) found, expected exactly one", static_cast<unsigned>(sites.size()));
+		sprintf_s(reason, "found %u card split(s), expected 1", static_cast<unsigned>(sites.size()));
 		Refuse(reason);
 		return;
 	}
@@ -173,12 +173,12 @@ void StageCards::Install()
 
 	if (!CodePatch::Write(sites.front(), split, sizeof(split)))
 	{
-		Refuse("the card split could not be written");
+		Refuse("could not patch the card split");
 		return;
 	}
 
 	g_patched = true;
-	sprintf_s(g_status, "every card past 20 is read down stage_thumb01, as many rows as it has");
+	sprintf_s(g_status, "Cards past 20 come from stage_thumb01, using all of its rows.");
 	LOG("StageCards: %s", g_status);
 }
 

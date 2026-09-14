@@ -62,7 +62,7 @@ void UpdateNotifierWindow::DrawInstall()
 
 	if (snapshot.busy)
 	{
-		if (ImGui::Button("Stop"))
+		if (ImGui::Button("Cancel"))
 			UpdateInstall::Cancel();
 
 		return;
@@ -70,8 +70,7 @@ void UpdateNotifierWindow::DrawInstall()
 
 	if (snapshot.staged)
 	{
-		UiText::Good("The update is ready. The game closes, the updater swaps the files and Steam "
-			"starts it again.");
+		UiText::Good("Update ready. The game will close, install it and start again through Steam.");
 
 		return;
 	}
@@ -81,21 +80,21 @@ void UpdateNotifierWindow::DrawInstall()
 
 	if (ImGui::IsItemHovered())
 	{
-		ImGui::SetTooltip("Downloads the release, checks it, then closes the game so the updater "
-			"can replace the dll. Steam starts the game again when it is done.");
+		ImGui::SetTooltip("Downloads and checks the update, then closes the game to install it. "
+			"Steam starts the game again when it is done.");
 	}
 }
 
 void UpdateNotifierWindow::Draw()
 {
-	ImGui::Text("%s %s is out.", MBTL_IM_NAME, UpdateCheck::GetLatestVersion());
-	ImGui::TextDisabled("You are running %s.", MBTL_IM_VERSION);
+	ImGui::Text("%s %s is available.", MBTL_IM_NAME, UpdateCheck::GetLatestVersion());
+	ImGui::TextDisabled("You have %s.", MBTL_IM_VERSION);
 
 	ImGui::Spacing();
 
 	DrawInstall();
 
-	if (ImGui::Button("Open the releases page"))
+	if (ImGui::Button("Open the release page"))
 	{
 		ShellExecuteA(nullptr, "open", UpdateCheck::GetReleaseUrl(), nullptr, nullptr,
 			SW_SHOWNORMAL);
@@ -119,6 +118,5 @@ void UpdateNotifierWindow::Draw()
 		Close();
 	}
 
-	ImGui::TextDisabled("The game locks the mod while it runs, so an update that is installed by "
-		"hand needs the game closed first.");
+	ImGui::TextDisabled("To install an update by hand, close the game first.");
 }

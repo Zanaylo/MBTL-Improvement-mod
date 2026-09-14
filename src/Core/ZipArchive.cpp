@@ -495,7 +495,7 @@ bool ZipArchive::Extract(const std::string& path, const std::string& intoFolder,
 
 	if (!source.Open(path))
 	{
-		strncpy_s(status, statusSize, "that is not a zip, or it could not be read", _TRUNCATE);
+		strncpy_s(status, statusSize, "not a zip file, or it could not be read", _TRUNCATE);
 		return false;
 	}
 
@@ -552,7 +552,7 @@ bool ZipArchive::Extract(const std::string& path, const std::string& intoFolder,
 
 	if (refused > 0)
 	{
-		sprintf_s(status, statusSize, "%d file(s) extracted, %d refused for their path", outFiles,
+		sprintf_s(status, statusSize, "%d file(s) extracted, %d skipped (unsafe path)", outFiles,
 			refused);
 	}
 	else

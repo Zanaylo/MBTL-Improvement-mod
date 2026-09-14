@@ -291,7 +291,7 @@ void Rebuild()
 	g_missed.clear();
 	ReleaseSRWLockExclusive(&g_missedLock);
 
-	sprintf_s(g_status, "%d file(s) answer for the game", count);
+	sprintf_s(g_status, "%d file(s) in use", count);
 }
 
 void Watch(int which, const std::string& folder)

@@ -78,11 +78,11 @@ void ConfigPanel::DrawGeneralTab()
 
 	ImGui::SeparatorText("Logging");
 
-	SaveBoolOnChange("Log every file the mod serves", g_settings.logServedFiles, "ModFiles", "LogServedFiles");
-	SaveBoolOnChange("Log files the game asked for next to yours", g_settings.logMissingFiles, "ModFiles",
-		"LogMissingFiles");
+	SaveBoolOnChange("Log every file loaded from mods", g_settings.logServedFiles, "ModFiles", "LogServedFiles");
+	SaveBoolOnChange("Log files the game looked for in mod folders but did not find", g_settings.logMissingFiles,
+		"ModFiles", "LogMissingFiles");
 
-	UiText::Muted("Saved to %s as soon as something changes.", Settings::IniPath().c_str());
+	UiText::Muted("Changes are saved to %s right away.", Settings::IniPath().c_str());
 }
 
 void ConfigPanel::DrawUpdateOptions()
@@ -92,8 +92,8 @@ void ConfigPanel::DrawUpdateOptions()
 	SaveBoolOnChange("Check for updates on start", g_settings.checkForUpdates, "Mod", "CheckForUpdates");
 
 	if (ImGui::IsItemHovered())
-		ImGui::SetTooltip("Asks GitHub once, on a thread of its own, whether a newer release exists. Nothing is "
-			"downloaded until you ask for it.");
+		ImGui::SetTooltip("Checks GitHub once at startup for a newer version. Nothing downloads until you press "
+			"Update now.");
 
 	ImGui::BeginDisabled(UpdateCheck::IsChecking() || UpdateInstall::IsBusy());
 
@@ -117,7 +117,7 @@ void ConfigPanel::DrawOverlayOptions()
 {
 	ImGui::SeparatorText("Overlay");
 
-	SaveBoolOnChange("Keep the hitboxes up in the game's own pause", g_settings.drawWhilePaused, kOverlay,
+	SaveBoolOnChange("Keep hitboxes visible when the game is paused", g_settings.drawWhilePaused, kOverlay,
 		"DrawWhileGamePaused");
 	SaveBoolOnChange("Show notifications", g_settings.notifications, kOverlay, "Notifications");
 
@@ -139,12 +139,13 @@ void ConfigPanel::DrawOverlayOptions()
 		Settings::SaveInt(kOverlay, "Cursor", g_settings.overlayCursor);
 
 	if (ImGui::IsItemHovered())
-		ImGui::SetTooltip("Automatic draws the cursor itself in exclusive fullscreen, where Windows hides it.");
+		ImGui::SetTooltip("Automatic: the overlay draws its own cursor in exclusive fullscreen, where Windows "
+			"hides it.");
 }
 
 void ConfigPanel::DrawStepOptions()
 {
-	ImGui::SeparatorText("Holding the next-frame key");
+	ImGui::SeparatorText("Holding the next frame key");
 
 	Ui::SetItemWidth(kSliderWidth);
 	ImGui::SliderInt("Wait before repeating", &g_settings.stepRepeatDelayMs, 0, 1000, "%d ms");
@@ -153,7 +154,7 @@ void ConfigPanel::DrawStepOptions()
 		Settings::SaveInt(kTraining, "StepRepeatDelayMs", g_settings.stepRepeatDelayMs);
 
 	if (ImGui::IsItemHovered())
-		ImGui::SetTooltip("How long the key has to be held before it steps on its own. A tap is always one frame.");
+		ImGui::SetTooltip("How long to hold the key before it keeps stepping. A tap always moves one frame.");
 
 	Ui::SetItemWidth(kSliderWidth);
 	ImGui::SliderInt("Between steps", &g_settings.stepRepeatIntervalMs, 16, 500, "%d ms");
@@ -166,12 +167,12 @@ void ConfigPanel::DrawRosterOptions()
 {
 	ImGui::SeparatorText("Characters");
 
-	SaveBoolOnChange("Unplayable characters", g_settings.unlockHiddenCharacters, "Roster", "UnlockHiddenCharacters");
+	SaveBoolOnChange("Unlock hidden characters", g_settings.unlockHiddenCharacters, "Roster", "UnlockHiddenCharacters");
 
 	if (ImGui::IsItemHovered())
-		ImGui::SetTooltip("Lets you pick the characters the game lists but locks, such as Mario's Sister, on character "
-			"select and in training's quick character select. Offline only: it switches itself off in any online mode. "
-			"They were never meant to be played alone, so expect rough edges.");
+		ImGui::SetTooltip("Lets you pick locked characters, such as Mario's Sister, on character select and in "
+			"training's quick character select. Offline only: it turns off in online modes. They were not made "
+			"for normal play, so expect glitches.");
 
 	if (!HiddenCharacters::IsAvailable())
 	{
@@ -193,7 +194,7 @@ void ConfigPanel::DrawKeybindsTab()
 	if (ImGui::BeginTable("##keybinds", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg |
 		ImGuiTableFlags_SizingStretchProp))
 	{
-		ImGui::TableSetupColumn("What");
+		ImGui::TableSetupColumn("Action");
 		ImGui::TableSetupColumn("Key");
 		ImGui::TableSetupColumn("");
 		ImGui::TableHeadersRow();
@@ -205,7 +206,7 @@ void ConfigPanel::DrawKeybindsTab()
 	}
 
 	ImGui::TextDisabled("%s", m_capture >= 0 ? "Press the key you want, or Escape to cancel."
-		: "Saved to MBTL_IM.ini as soon as something is bound.");
+		: "Changes are saved to MBTL_IM.ini right away.");
 
 	DrawConflicts();
 }
@@ -254,7 +255,7 @@ void ConfigPanel::DrawFunctionRow()
 
 	ImGui::TextUnformatted("Function key");
 	ImGui::SameLine();
-	ImGui::TextDisabled("held with a bind marked Fn");
+	ImGui::TextDisabled("hold it for keys marked Fn");
 
 	ImGui::PushID("function");
 
@@ -317,7 +318,7 @@ void ConfigPanel::DrawConflicts()
 			if (!KeyBinds::SameKey(Hotkeys::Bind(mine), Hotkeys::Bind(theirs)))
 				continue;
 
-			UiText::Warn("%s and %s are both %s.", Hotkeys::Label(mine), Hotkeys::Label(theirs),
+			UiText::Warn("%s and %s both use %s.", Hotkeys::Label(mine), Hotkeys::Label(theirs),
 				Hotkeys::Describe(mine));
 		}
 	}

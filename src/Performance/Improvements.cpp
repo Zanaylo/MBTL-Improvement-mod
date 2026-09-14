@@ -18,25 +18,24 @@ struct Step
 constexpr Step kSteps[Improvements::Level_COUNT] = {
 	{
 		"Off",
-		"The game's own Display option, untouched.",
+		"Uses the game's own display setting.",
 		0, 0,
 	},
 	{
 		"1080p",
-		"1920x1080. On a 1080p screen that is one back buffer pixel per screen pixel: nothing "
-		"supersampled, nothing thrown away, and the overlay stays exactly sharp.",
+		"1920x1080. Best for a 1080p screen: one pixel per screen pixel, and the overlay stays sharp.",
 		1920, 1080,
 	},
 	{
 		"1440p",
-		"2560x1440, fitted to your window. Four samples per pixel on the HUD and the menus. Into a "
-		"1080p window the ratio is not whole, so the overlay softens a little.",
+		"2560x1440, shrunk to fit your window. Sharper HUD and menus. On a 1080p window the overlay "
+		"gets a little soft.",
 		2560, 1440,
 	},
 	{
 		"4K",
-		"3840x2160. Nine samples per pixel and nine times the fill rate. Into a 1080p window it is "
-		"an exact 2:1, which is the cleanest of the three.",
+		"3840x2160. The sharpest, and the most GPU work. On a 1080p window it shrinks exactly 2:1, "
+		"the cleanest result.",
 		3840, 2160,
 	},
 };

@@ -88,13 +88,13 @@ bool GameState::AllowsTrainingTools()
 const char* GameState::StatusText()
 {
 	if (!IsOnlineKnown())
-		return "The online session was not found in this build, so training tools stay off.";
+		return "Training tools are off: the online check does not work in this game version.";
 
 	if (IsOnline())
-		return "Not while you are online.";
+		return "Not available online.";
 
 	if (!IsBattleRunning())
-		return "Only in a match: training, versus, arcade or a replay.";
+		return "Works only in a match (training, versus, arcade or replay).";
 
 	return IsTraining() ? "In training." : "In a match.";
 }

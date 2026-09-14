@@ -40,9 +40,9 @@ void Publish(const GitHubRelease::Release& release, bool newer)
 	strncpy_s(g_notes, release.notes.c_str(), _TRUNCATE);
 
 	if (newer)
-		sprintf_s(g_status, "%s is out, this is %s", release.version.c_str(), MBTL_IM_VERSION);
+		sprintf_s(g_status, "%s is out, you have %s", release.version.c_str(), MBTL_IM_VERSION);
 	else
-		strncpy_s(g_status, "this is the latest release", _TRUNCATE);
+		strncpy_s(g_status, "this is the newest version", _TRUNCATE);
 
 	g_newer.store(newer);
 }
@@ -51,7 +51,7 @@ void Fail(const char* error)
 {
 	std::lock_guard<std::mutex> guard(g_lock);
 
-	sprintf_s(g_status, "the check did not answer: %.180s", error);
+	sprintf_s(g_status, "the check failed: %.180s", error);
 	g_newer.store(false);
 }
 
@@ -67,7 +67,7 @@ DWORD WINAPI Run(LPVOID)
 	}
 	else if (release.draft)
 	{
-		Fail("the newest release is still a draft");
+		Fail("the newest version is not published yet");
 	}
 	else
 	{
@@ -103,7 +103,7 @@ void Launch()
 	}
 
 	g_checking.store(false);
-	Fail("a thread could not be started");
+	Fail("the check could not start");
 }
 
 }

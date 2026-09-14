@@ -125,7 +125,7 @@ void MainWindow::DrawFrameMeterControls()
 	ImGui::TextDisabled("(%s)", Hotkeys::Describe(Hotkeys::Action_ToggleFrameMeter));
 
 	if (visible && FrameMeterHud::FontFailed())
-		UiText::Warn("The game's font did not load, so the meter draws without its numbers.");
+		UiText::Warn("The game font did not load. The meter shows without numbers.");
 }
 
 void MainWindow::DrawFrameMeterOptions()
@@ -145,19 +145,19 @@ void MainWindow::DrawFrameMeterOptions()
 	if (ImGui::IsItemDeactivatedAfterEdit())
 		Settings::SaveInt(kFrameMeter, "Opacity", g_settings.frameMeterOpacity);
 
-	SavedCheckbox("Count band", &g_settings.frameMeterCounts, "BandCounts",
-		"The length of each run of cells, written inside the run.");
+	SavedCheckbox("Frame counts", &g_settings.frameMeterCounts, "BandCounts",
+		"Writes how many frames each block of same colour cells lasts, inside the block.");
 	SavedCheckbox("Hitstun, gap and flash", &g_settings.frameMeterTotals, "LineTotals",
-		"A line above and below the bars totalling blockstun, hitstun, gaps and super flash.");
+		"A line above and below the bars with totals for blockstun, hitstun, gaps and super flash.");
 	SavedCheckbox("Status row", &g_settings.frameMeterAttributes, "AttributeRow",
-		"A thin row under each bar showing which kinds of invincibility are in force.");
+		"A thin row under each bar that shows which invincibility is active.");
 	SavedCheckbox("Place automatically", &g_settings.frameMeterAuto, "PlaceAutomatically",
-		"Centred near the bottom of the screen, whatever the window size.");
+		"Centres the meter near the bottom of the screen at any window size.");
 
 	if (!g_settings.frameMeterAuto)
 	{
 		SavedCheckbox("Move the meter with the mouse", &g_settings.frameMeterDrag, "MouseDrag",
-			"While this window is open, drag the meter where you want it.");
+			"While this window is open, drag the meter to where you want it.");
 
 		Ui::SetItemWidth(kOptionWidth);
 		ImGui::DragInt("X", &g_settings.frameMeterX, 2.0f, 0, 4096);
@@ -172,9 +172,9 @@ void MainWindow::DrawFrameMeterOptions()
 			Settings::SaveInt(kFrameMeter, "PositionY", g_settings.frameMeterY);
 	}
 
-	SavedCheckbox("Write the meter's readings to the log", &g_settings.frameMeterTrace, "Trace",
-		"One line per player per recorded frame with every field the meter reads. Send the log when a colour looks "
-		"wrong; leave it off otherwise.");
+	SavedCheckbox("Log frame meter data", &g_settings.frameMeterTrace, "Trace",
+		"Writes one line per player per frame to the log. Turn it on only if a colour looks wrong, then send the "
+		"log.");
 
 	DrawWindowButton(WindowType_FrameMeterLegend, "Frame meter information", "Close frame meter information");
 	ImGui::TreePop();
@@ -194,8 +194,8 @@ void MainWindow::DrawHudControls()
 		BattleHud::SetHidden(hidden);
 
 	if (ImGui::IsItemHovered())
-		ImGui::SetTooltip("Takes the gauges, the timer and the training info off the screen the way the game itself does "
-			"for a cinematic. Offline only.");
+		ImGui::SetTooltip("Hides the gauges, the timer and the training info, like the game does in cinematics. "
+			"Offline only.");
 
 	ImGui::SameLine();
 	ImGui::TextDisabled("(%s)", Hotkeys::Describe(Hotkeys::Action_HideHud));
@@ -215,7 +215,7 @@ void MainWindow::DrawCharacterControls()
 		CharacterDraw::SetHidden(hidden);
 
 	if (ImGui::IsItemHovered())
-		ImGui::SetTooltip("Stops the characters being drawn while the match runs exactly as before. The stage and the HUD "
+		ImGui::SetTooltip("Stops drawing the characters. The match keeps running as normal, and the stage and HUD "
 			"stay. Offline only.");
 
 	ImGui::SameLine();
@@ -228,7 +228,7 @@ void MainWindow::DrawCharacterControls()
 
 	bool effects = CharacterDraw::EffectsHidden();
 
-	if (ImGui::Checkbox("Their effects too", &effects))
+	if (ImGui::Checkbox("Hide their effects too", &effects))
 		CharacterDraw::SetEffectsHidden(effects);
 
 	if (ImGui::IsItemHovered())
@@ -267,7 +267,7 @@ void MainWindow::DrawHitboxTypes()
 		Settings::SaveBool("Hitbox", "ShowOrigin", g_settings.hitboxShowOrigin);
 
 	if (ImGui::IsItemHovered())
-		ImGui::SetTooltip("A cross at each object's position, the point its boxes are measured from.");
+		ImGui::SetTooltip("Draws a cross at each object's position. Its boxes are placed from that point.");
 
 	if (ImGui::BeginTable("##boxtypes", 4, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg |
 		ImGuiTableFlags_SizingStretchProp))
@@ -320,7 +320,7 @@ void MainWindow::DrawFrameStepControls()
 {
 	if (!FrameStepper::IsImplemented())
 	{
-		UiText::Warn("Pause is not available: %s", FrameStepper::StatusText());
+		UiText::Warn("Pause: %s", FrameStepper::StatusText());
 		return;
 	}
 
@@ -350,8 +350,8 @@ void MainWindow::DrawStagesSection()
 
 	DrawWindowButton(WindowType_Stages, "Open stages", "Close stages");
 
-	ImGui::TextWrapped("Stages taken out of another French-Bread game you own and installed as stages of their "
-		"own, the stages the game hides, and the stage table.");
+	ImGui::TextWrapped("Import stages from other French-Bread games you own, use the stages the game hides, and see "
+		"the stage table.");
 
 	UiText::Good("%d stage(s) installed.", StageLibrary::Count());
 	UiText::Muted("%s", StageImport::StatusText());
@@ -364,11 +364,11 @@ void MainWindow::DrawMusicSection()
 
 	DrawWindowButton(WindowType_Music, "Open music", "Close music");
 
-	ImGui::TextWrapped("The whole track list, your own music, and the rules that decide what plays where.");
+	ImGui::TextWrapped("All tracks, your own music, and the rules for what plays where.");
 
 	if (!BgmControl::IsHooked())
 	{
-		UiText::Warn("Music control is not active: %s", BgmControl::StatusText());
+		UiText::Warn("Music control is off: %s", BgmControl::StatusText());
 		return;
 	}
 
@@ -382,8 +382,8 @@ void MainWindow::DrawModsSection()
 
 	DrawWindowButton(WindowType_Mods, "Open mods", "Close mods");
 
-	ImGui::TextWrapped("Folders in MBTL-IM\\Packs that stand in for the game's own files. Switch one on or off "
-		"without restarting.");
+	ImGui::TextWrapped("Folders in MBTL-IM\\Packs that replace game files. Turn each one on or off without "
+		"restarting.");
 
 	UiText::Good("%d of %d mod(s) on. %s", ModPacks::EnabledCount(), ModPacks::Count(), ModFiles::StatusText());
 }
@@ -416,7 +416,7 @@ void MainWindow::DrawPaletteChooser(int player)
 
 	if (chara < 0)
 	{
-		ImGui::TextDisabled("P%d: nobody there yet", PaletteOwner::SideOf(player) + 1);
+		ImGui::TextDisabled("P%d: no character yet", PaletteOwner::SideOf(player) + 1);
 		return;
 	}
 
@@ -476,43 +476,43 @@ void MainWindow::DrawPaletteOptions()
 		Settings::SaveBool(kPalette, "GroupByPart", g_settings.paletteGroupByPart);
 
 	if (ImGui::IsItemHovered())
-		ImGui::SetTooltip("Groups the entries like the game's colour screen does (hair, skin, shoes), using its "
-			"colour edit table instead of guessing.");
+		ImGui::SetTooltip("Groups the colours by part (hair, skin, shoes) like the game's colour screen, using the "
+			"game's own colour table.");
 
-	if (ImGui::Checkbox("Flash the entry on the character", &g_settings.paletteFlashEntry))
+	if (ImGui::Checkbox("Flash the selected colour on the character", &g_settings.paletteFlashEntry))
 		Settings::SaveBool(kPalette, "FlashEntry", g_settings.paletteFlashEntry);
 
 	if (ImGui::IsItemHovered())
-		ImGui::SetTooltip("Picking an entry darkens everything else and blinks that entry on the character, so what it "
-			"owns is unmistakable before you change it.");
+		ImGui::SetTooltip("When you pick a colour, everything else goes dark and that colour blinks on the character, "
+			"so you can see what it changes.");
 
 	if (ImGui::Checkbox("Filter junk colours", &g_settings.paletteFilterJunk))
 		Settings::SaveBool(kPalette, "FilterJunk", g_settings.paletteFilterJunk);
 
 	if (ImGui::IsItemHovered())
-		ImGui::SetTooltip("Hides the entries no pixel of this character ever uses, read off its own sprite sheet, and the "
-			"green the unused slots are filled with. Anything the game's own colour screen offers stays.");
+		ImGui::SetTooltip("Hides colours this character never uses and the green filler in empty slots. Colours the "
+			"game's own colour screen offers always stay.");
 
 	if (ImGui::Checkbox("See the other player's colours", &g_settings.showOnlinePalettes))
 		Settings::SaveBool(kPalette, "ShowOnlinePalettes", g_settings.showOnlinePalettes);
 
 	if (ImGui::IsItemHovered())
-		ImGui::SetTooltip("On, you see the palette they picked. Off, their side is left the way the game gives it. Yours is "
-			"sent either way.");
+		ImGui::SetTooltip("On: you see the palette they picked. Off: their side uses the game's colours. This does not "
+			"change whether yours is sent.");
 
 	if (ImGui::Checkbox("Send my palette to the other player", &g_settings.sharePalettes))
 		Settings::SaveBool("Netplay", "SharePalettes", g_settings.sharePalettes);
 
 	if (ImGui::IsItemHovered())
-		ImGui::SetTooltip("Online, the palette you wear is sent to your opponent on the mod's own Steam channel, so they see "
-			"it too if they run the mod.");
+		ImGui::SetTooltip("Online, sends your palette to your opponent through the mod's Steam channel. They see it if "
+			"they also run the mod.");
 
 	if (PaletteControl::IsSpectating())
-		ImGui::TextDisabled("watching: the colours are the players' own");
+		ImGui::TextDisabled("spectating: you see each player's own colours");
 	else if (PaletteControl::LocalPlayer() >= 0)
 		ImGui::TextDisabled(PaletteControl::LocalPlayer() == 0 ? "you are playing P1" : "you are playing P2");
 	else
-		ImGui::TextDisabled("both characters are yours to dress");
+		ImGui::TextDisabled("you can change the colours of both characters");
 
 	if (PaletteControl::IsOnline())
 		UiText::Muted("%s", PaletteShare::GetStatusText());
@@ -525,7 +525,7 @@ void MainWindow::DrawPerformanceSection()
 
 	DrawWindowButton(WindowType_Performance, "Open performance", "Close performance");
 
-	ImGui::TextWrapped("Frame pacing, the display parameters and where the time in each frame goes.");
+	ImGui::TextWrapped("Frame pacing, display settings, and where the time in each frame goes.");
 }
 
 void MainWindow::DrawConfigSection()

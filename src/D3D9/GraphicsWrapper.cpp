@@ -21,7 +21,7 @@ bool g_wrapper = false;
 
 char g_module[MAX_PATH] = "";
 char g_name[96] = "";
-char g_status[320] = "not asked yet";
+char g_status[320] = "not checked yet";
 
 const char* LastSegment(const char* path)
 {
@@ -121,14 +121,14 @@ void Settle(HMODULE owner)
 {
 	if (owner == nullptr)
 	{
-		strncpy_s(g_status, "the Direct3D 9 device belongs to no module the loader knows",
+		strncpy_s(g_status, "could not find which file provides Direct3D 9",
 			_TRUNCATE);
 		return;
 	}
 
 	if (GetModuleFileNameA(owner, g_module, sizeof(g_module)) == 0)
 	{
-		strncpy_s(g_status, "the Direct3D 9 module has no file name", _TRUNCATE);
+		strncpy_s(g_status, "the Direct3D 9 file has no name", _TRUNCATE);
 		return;
 	}
 
@@ -139,11 +139,11 @@ void Settle(HMODULE owner)
 
 	if (!g_wrapper)
 	{
-		sprintf_s(g_status, "Direct3D 9 is the system's own");
+		sprintf_s(g_status, "Direct3D 9 is from Windows");
 		return;
 	}
 
-	sprintf_s(g_status, "Direct3D 9 is %s, out of %s", g_name, g_module);
+	sprintf_s(g_status, "Direct3D 9 is %s, from %s", g_name, g_module);
 }
 
 }

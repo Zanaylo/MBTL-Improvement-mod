@@ -160,7 +160,7 @@ bool Session::Open(const std::string& url, std::string& outError)
 
 	if (m_session == nullptr)
 	{
-		outError = Describe("no internet session", GetLastError());
+		outError = Describe("could not go online", GetLastError());
 		return false;
 	}
 
@@ -172,7 +172,7 @@ bool Session::Open(const std::string& url, std::string& outError)
 
 	if (m_request == nullptr)
 	{
-		outError = Describe("the address could not be opened", GetLastError());
+		outError = Describe("could not connect", GetLastError());
 		return false;
 	}
 
@@ -181,7 +181,7 @@ bool Session::Open(const std::string& url, std::string& outError)
 	if (m_status >= 400)
 	{
 		char text[96] = {};
-		sprintf_s(text, "the server answered %d", m_status);
+		sprintf_s(text, "server error %d", m_status);
 		outError = text;
 		return false;
 	}
@@ -226,7 +226,7 @@ bool Http::GetText(const std::string& url, std::string& out, std::string& outErr
 	{
 		if (out.size() + read > kMaxText)
 		{
-			outError = "the answer is too large";
+			outError = "the reply is too large";
 			return false;
 		}
 
@@ -235,7 +235,7 @@ bool Http::GetText(const std::string& url, std::string& out, std::string& outErr
 
 	if (out.empty())
 	{
-		outError = "the answer was empty";
+		outError = "the reply was empty";
 		return false;
 	}
 
@@ -256,7 +256,7 @@ bool Http::Download(const std::string& url, const std::string& path, Progress* p
 
 	if (!sink.Open(path))
 	{
-		outError = Describe("the download file could not be created", GetLastError());
+		outError = Describe("could not create the download file", GetLastError());
 		return false;
 	}
 
@@ -271,7 +271,7 @@ bool Http::Download(const std::string& url, const std::string& path, Progress* p
 		{
 			sink.Close();
 			DeleteFileA(path.c_str());
-			outError = Describe("the download could not be written to disk", GetLastError());
+			outError = Describe("could not save the download", GetLastError());
 			return false;
 		}
 
@@ -291,14 +291,14 @@ bool Http::Download(const std::string& url, const std::string& path, Progress* p
 	if (received == 0)
 	{
 		DeleteFileA(path.c_str());
-		outError = "nothing came back";
+		outError = "the server sent nothing";
 		return false;
 	}
 
 	if (total != 0 && received != total)
 	{
 		DeleteFileA(path.c_str());
-		outError = "the download stopped early. An antivirus, firewall or proxy may have cut it";
+		outError = "the download stopped early. An antivirus, firewall or proxy may have blocked it";
 		return false;
 	}
 
@@ -318,7 +318,7 @@ bool Http::Sha256OfFile(const std::string& path, std::string& outHex, std::strin
 
 	if (file == INVALID_HANDLE_VALUE)
 	{
-		outError = "the file could not be opened";
+		outError = "could not open the file";
 		return false;
 	}
 
@@ -333,7 +333,7 @@ bool Http::Sha256OfFile(const std::string& path, std::string& outHex, std::strin
 		if (provider != 0)
 			CryptReleaseContext(provider, 0);
 
-		outError = "SHA-256 is not available";
+		outError = "could not check the download (SHA-256 is not available)";
 		return false;
 	}
 
@@ -355,7 +355,7 @@ bool Http::Sha256OfFile(const std::string& path, std::string& outHex, std::strin
 
 	if (!ok)
 	{
-		outError = "the file could not be hashed";
+		outError = "could not check the download";
 		return false;
 	}
 

@@ -336,9 +336,9 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int)
 
 	if (!Apply(handoff))
 	{
-		MessageBoxW(nullptr, L"The MBTL Improvement Mod update could not be applied. "
-			L"MBTL-IM\\Updater\\logs\\updater.log says why, and the previous files are still in "
-			L"place.", L"MBTL Improvement Mod", MB_ICONERROR | MB_OK);
+		MessageBoxW(nullptr, L"The MBTL Improvement Mod update failed. Your previous version is still "
+			L"installed. See MBTL-IM\\Updater\\logs\\updater.log for details.", L"MBTL Improvement Mod",
+			MB_ICONERROR | MB_OK);
 
 		return 1;
 	}

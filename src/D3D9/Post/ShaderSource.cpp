@@ -785,7 +785,7 @@ bool TranslateReShade(const std::string& source, std::string& outHlsl, std::stri
 
 	if (entry.empty())
 	{
-		outNote = "no technique naming a PixelShader, so there is no pass to run";
+		outNote = "has no technique with a PixelShader, so there is nothing to run";
 		return false;
 	}
 
@@ -794,14 +794,14 @@ bool TranslateReShade(const std::string& source, std::string& outHlsl, std::stri
 
 	if (!FindFunction(text, entry, returnType, parameters))
 	{
-		outNote = entry + " is named by the technique but not defined in this file";
+		outNote = "its technique uses " + entry + ", which is not in this file";
 		return false;
 	}
 
 	outHlsl = std::string(kBindings) + kReShadePrologue + "\n" + text +
 		BuildEntry(entry, returnType, parameters);
 
-	outNote = "ReShade .fx, the first technique's pass through " + entry;
+	outNote = "ReShade .fx, running " + entry + " from the first technique";
 	return true;
 }
 
@@ -1344,13 +1344,13 @@ bool TranslateGlsl(const std::string& source, std::string& outHlsl, std::string&
 			"\tmainImage(outColour, float2(uv.x, 1.0 - uv.y) * FrameSize.zw);\n"
 			"\treturn outColour;\n}\n";
 
-		outNote = "Shadertoy GLSL, mainImage over the frame";
+		outNote = "Shadertoy GLSL, one pass";
 	}
 	else
 	{
 		if (!RenameGlslMain(text))
 		{
-			outNote = "no fragment main was found, so there is no pass to run";
+			outNote = "has no main function, so there is nothing to run";
 			return false;
 		}
 

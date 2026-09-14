@@ -81,7 +81,7 @@ void EnterStart()
 
 	InterlockedExchange(&g_enterQueued, static_cast<LONG>(scene));
 
-	sprintf_s(g_status, "sent to scene %u, the loading screen this launch started on", scene);
+	sprintf_s(g_status, "going to scene %u, the loading screen the game started on", scene);
 	LOG("GameRestart: %s", g_status);
 }
 
@@ -121,7 +121,7 @@ void GameRestart::Install()
 
 	if (!resolved || scenes.manager == 0)
 	{
-		strncpy_s(g_status, "the scene switch was not found in this build", _TRUNCATE);
+		strncpy_s(g_status, "restart does not work on this game version", _TRUNCATE);
 		LOG("GameRestart: %s", g_status);
 		return;
 	}
@@ -130,7 +130,7 @@ void GameRestart::Install()
 		reinterpret_cast<void**>(&oSceneStep), "scene step");
 
 	if (!g_hooked)
-		strncpy_s(g_status, "the scene step could not be hooked", _TRUNCATE);
+		strncpy_s(g_status, "restart could not be set up", _TRUNCATE);
 
 	LOG("GameRestart: %s", g_hooked ? "ready" : g_status);
 }
@@ -146,19 +146,19 @@ bool GameRestart::CanSoftReset()
 bool GameRestart::SoftReset()
 {
 	if (!g_hooked)
-		return Refuse("the scene switch was not found in this build");
+		return Refuse("restart does not work on this game version");
 
 	if (SceneWatch::First() == SceneWatch::kNone)
-		return Refuse("the mod has not seen this session start yet");
+		return Refuse("not ready: the mod did not see the game start");
 
 	if (g_pending)
-		return Refuse("a restart is already on its way");
+		return Refuse("already restarting");
 
 	if (!GameState::IsOnlineKnown())
-		return Refuse("the online check was not found in this build, so the restart stays off");
+		return Refuse("restart is off: the online check does not work on this game version");
 
 	if (GameState::IsOnline())
-		return Refuse("not while a netplay match is running");
+		return Refuse("not available during an online match");
 
 	if (GameState::IsBattleRunning() && !GameState::IsTraining())
 		return Refuse("leave the match first");
@@ -167,7 +167,7 @@ bool GameRestart::SoftReset()
 	g_pending = true;
 	g_waited = kTitleFrames;
 
-	strncpy_s(g_status, "back to the title, then to the loading screen", _TRUNCATE);
+	strncpy_s(g_status, "going to the title screen, then the loading screen", _TRUNCATE);
 	LOG("GameRestart: %s", g_status);
 	return true;
 }
@@ -184,7 +184,7 @@ void GameRestart::OnFrame()
 
 		g_pending = false;
 
-		strncpy_s(g_status, "the game never reached the title, nothing more was done", _TRUNCATE);
+		strncpy_s(g_status, "the game did not reach the title screen, so the restart stopped", _TRUNCATE);
 		LOG("GameRestart: %s", g_status);
 		return;
 	}

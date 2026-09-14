@@ -35,15 +35,15 @@ void TrainingDebugSection::DrawState()
 	ImGui::SeparatorText("State");
 	ImGui::Text("Battle running %s, online %s (known %s), game paused %s", YesNo(GameState::IsBattleRunning()),
 		YesNo(GameState::IsOnline()), YesNo(GameState::IsOnlineKnown()), YesNo(GameState::IsGamePaused()));
-	ImGui::Text("Mode %d, sub-mode %d, training %s, frame counter %u", GameState::Mode(), GameState::SubMode(),
+	ImGui::Text("Mode %d, submode %d, training %s, frame counter %u", GameState::Mode(), GameState::SubMode(),
 		YesNo(GameState::IsTraining()), GameState::FrameCounter());
 	ImGui::Text("Mod pause %s, frozen %s", YesNo(FrameStepper::IsPaused()), YesNo(FrameStepper::IsFrozen()));
 
 	if (ImGui::Checkbox("Replay the last frame while paused", &g_settings.replayFrozenFrame))
 		Settings::SaveBool("Training", "ReplayFrozenFrame", g_settings.replayFrozenFrame);
 
-	UiText::Help("When off, the paused battle keeps drawing with its simulation stopped. Turn it on only if the "
-		"picture looks wrong while paused. It then shows the last captured frame.");
+	UiText::Help("Off: the paused match keeps drawing while the game is stopped. Turn it on only if the picture looks "
+		"wrong while paused. It then shows the last captured frame.");
 }
 
 void TrainingDebugSection::DrawCamera()
@@ -68,13 +68,13 @@ void TrainingDebugSection::DrawCamera()
 		if (read)
 			ImGui::Text("x %.0f  y %.0f  zoom %.3f", view.x, view.y, view.zoom);
 		else
-			ImGui::TextDisabled("unreadable");
+			ImGui::TextDisabled("cannot read");
 
 		ImGui::PopID();
 	}
 
-	UiText::Muted("The hitboxes follow the selected element. Pick the one whose boxes stay on the characters when "
-		"the camera moves and zooms.");
+	UiText::Muted("Hitboxes follow the selected camera. Pick the one that keeps the boxes on the characters when the "
+		"camera moves and zooms.");
 }
 
 void TrainingDebugSection::DrawObjects()

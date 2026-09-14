@@ -37,17 +37,15 @@ struct Pending
 
 constexpr long kUnknownThread = 0;
 constexpr int kNoTrack = BgmTable::kNoTrack;
-constexpr const char* kPlaybackNames[] = { "nothing", "play", "stop", "give the music back" };
+constexpr const char* kPlaybackNames[] = { "do nothing", "play", "stop", "let the game choose" };
 
-constexpr const char* kNotInstalled = "not installed";
-constexpr const char* kNoPlay = "PlayBgm was not found on this game version";
-constexpr const char* kHookFailed = "PlayBgm could not be hooked";
-constexpr const char* kWaiting = "hooked. Play and Stop wait until the game has played music once";
-constexpr const char* kOnPresent = "hooked. Play and Stop act on the next frame";
-constexpr const char* kOnSceneChange = "hooked. The game plays music on another thread, so Play and Stop "
-	"wait for the next scene change";
-constexpr const char* kNoCommands = "hooked. StopBgm or StartBgm was not found, so Play and Stop "
-	"wait for the next scene change";
+constexpr const char* kNotInstalled = "not started";
+constexpr const char* kNoPlay = "the music player was not found on this game version";
+constexpr const char* kHookFailed = "the mod could not attach to the music player";
+constexpr const char* kWaiting = "ready. Play and Stop work once the game has played some music";
+constexpr const char* kOnPresent = "ready. Play and Stop work right away";
+constexpr const char* kOnSceneChange = "ready. Play and Stop take effect on the next screen change";
+constexpr const char* kNoCommands = "ready, but Play and Stop take effect on the next screen change";
 
 PlayBgm_t oPlayBgm = nullptr;
 BgmCommand_t g_stop = nullptr;
@@ -70,7 +68,7 @@ SRWLOCK g_pendingLock = SRWLOCK_INIT;
 Pending g_pending = { Playback_None, kNoTrack, false };
 
 SRWLOCK g_reasonLock = SRWLOCK_INIT;
-char g_reason[192] = "nothing has asked for music yet";
+char g_reason[192] = "no music asked for yet";
 
 void UpdateStatus()
 {
@@ -181,7 +179,7 @@ int Choose(int asked)
 
 	if (held != kNoTrack && BgmTable::IsPresent(held))
 	{
-		Explain("your pick, held over %s", askedName);
+		Explain("your pick, played instead of %s", askedName);
 		return held;
 	}
 
@@ -189,7 +187,7 @@ int Choose(int asked)
 
 	if (ruled != kNoTrack)
 	{
-		Explain("your rule replacing %s", askedName);
+		Explain("your rule, played instead of %s", askedName);
 		return ruled;
 	}
 
@@ -197,11 +195,11 @@ int Choose(int asked)
 
 	if (drawn != kNoTrack)
 	{
-		Explain("the randomizer, drawn over %s", askedName);
+		Explain("the randomizer, played instead of %s", askedName);
 		return drawn;
 	}
 
-	Explain("the game's own choice, %s", askedName);
+	Explain("the game's choice: %s", askedName);
 	return asked;
 }
 
@@ -223,7 +221,7 @@ void PlayHeld(int id)
 	}
 
 	InterlockedExchange(&g_held, id);
-	Explain("your pick, held until you stop it or give it back");
+	Explain("your pick, kept until you press Stop or Let the game choose");
 	Restart(id);
 }
 
@@ -231,7 +229,7 @@ void StopNow()
 {
 	InterlockedExchange(&g_held, kNoTrack);
 	g_stop();
-	Explain("stopped by you. The next screen brings music back");
+	Explain("you pressed Stop. Music comes back on the next screen");
 }
 
 void GiveBack()
@@ -242,7 +240,7 @@ void GiveBack()
 
 	if (!BgmTable::IsValidId(asked))
 	{
-		Explain("given back. The next screen picks the music");
+		Explain("the game picks the music on the next screen");
 		return;
 	}
 

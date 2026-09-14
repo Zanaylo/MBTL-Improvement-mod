@@ -22,7 +22,7 @@ BloomPass_t oBloomPass = nullptr;
 float* g_brightness = nullptr;
 float* g_alpha = nullptr;
 bool g_hooked = false;
-const char* g_status = "the stage bloom pass was not found in this build";
+const char* g_status = "not found in this game version";
 
 float Scaled(float value, float scale, float most)
 {
@@ -134,7 +134,7 @@ void StageBloom::Install()
 	g_hooked = HookManager::CreateHook(pass, reinterpret_cast<void*>(&HookedBloomPass),
 		reinterpret_cast<void**>(&oBloomPass), "stage bloom pass");
 
-	g_status = g_hooked ? "" : "the stage bloom pass could not be hooked";
+	g_status = g_hooked ? "" : "could not be turned on";
 	LOG("StageBloom: %s", g_hooked ? "ready" : g_status);
 }
 

@@ -35,7 +35,7 @@ constexpr const char* kModel = "bg.fbx.bin";
 constexpr const char* kNodeList = "nodes.txt";
 constexpr const char* kCustomGame = "Custom stage";
 constexpr const char* kStageMark = "./bg/";
-constexpr const char* kNoNumber = "no free stage number is left. Turn on the extension table or remove a stage";
+constexpr const char* kNoNumber = "No free stage number left. Remove a stage first.";
 constexpr int kDfciPriorityFloor = 700;
 constexpr long kWhole = 100;
 
@@ -63,7 +63,7 @@ std::string g_scanFolder;
 std::string g_scanGame;
 
 SRWLOCK g_statusLock = SRWLOCK_INIT;
-char g_status[224] = "no game looked at yet";
+char g_status[224] = "No game folder picked yet.";
 char g_shown[224] = {};
 
 volatile long g_busy = 0;
@@ -191,7 +191,7 @@ bool CopyFromSource(StageArchive::Source& source, Job& job, FbGameFolder::Game g
 
 	if (files.empty())
 	{
-		SetStatus("%s holds no file the mod could read", job.stage.c_str());
+		SetStatus("%s has no files the mod can read.", job.stage.c_str());
 		return false;
 	}
 
@@ -224,7 +224,7 @@ bool CopyFromSource(StageArchive::Source& source, Job& job, FbGameFolder::Game g
 
 	if (written == 0)
 	{
-		SetStatus("nothing in %s could be read", job.stage.c_str());
+		SetStatus("No file in %s could be read.", job.stage.c_str());
 		return false;
 	}
 
@@ -273,7 +273,7 @@ bool CopyFolder(Job& job)
 	if (written != 0)
 		return true;
 
-	SetStatus("there was nothing in %s the mod could read", job.path.c_str());
+	SetStatus("%s has no files the mod can read.", job.path.c_str());
 	return false;
 }
 
@@ -337,7 +337,7 @@ int RunBatch(Batch& batch)
 
 	if (!batch.custom && source == nullptr)
 	{
-		SetStatus("that game's stage data could not be opened");
+		SetStatus("Could not open that game's stage files.");
 		return 0;
 	}
 
@@ -381,14 +381,14 @@ DWORD WINAPI Worker(void* parameter)
 	const int done = RunBatch(*batch);
 
 	if (done == 1 && total == 1 && batch->replace)
-		SetStatus("stage %d is now %s. Restart the game to see it", batch->jobs.front().number,
+		SetStatus("Stage %d is now %s. Restart the game to see it.", batch->jobs.front().number,
 			batch->jobs.front().name.c_str());
 
 	if (done == 1 && total == 1 && !batch->replace)
-		SetStatus("%s is installed. Restart the game to see it", batch->jobs.front().name.c_str());
+		SetStatus("%s is installed. Restart the game to see it.", batch->jobs.front().name.c_str());
 
 	if (done != 0 && total > 1)
-		SetStatus("%d of %d stage(s) installed. Restart the game to see them", done, total);
+		SetStatus("%d of %d stage(s) installed. Restart the game to see them.", done, total);
 
 	InterlockedExchange(&g_progress, kWhole);
 	InterlockedExchange(&g_finished, 1);
@@ -408,7 +408,7 @@ bool Start(std::unique_ptr<Batch> batch)
 	if (thread == nullptr)
 	{
 		InterlockedExchange(&g_busy, 0);
-		SetStatus("the import could not be started");
+		SetStatus("Could not start the import.");
 		return false;
 	}
 
@@ -430,7 +430,7 @@ bool HoldsModel(const std::string& path)
 	if (GetFileAttributesA((path + "\\" + kModel).c_str()) != INVALID_FILE_ATTRIBUTES)
 		return true;
 
-	SetStatus("%s has no %s, so it is not a stage", path.c_str(), kModel);
+	SetStatus("%s has no %s, so it is not a stage folder.", path.c_str(), kModel);
 	return false;
 }
 
@@ -439,7 +439,7 @@ bool PickerFull()
 	if (StagePicker::Room() > 0)
 		return false;
 
-	SetStatus("the stage picker is full at %d entries. Take a stage out of it first", StagePicker::Capacity());
+	SetStatus("The stage picker is full (%d slots). Take a stage out of it first.", StagePicker::Capacity());
 	return true;
 }
 
@@ -458,7 +458,7 @@ bool StageImport::Scan(const char* folder)
 
 	if (game == FbGameFolder::Game_None)
 	{
-		SetStatus("that folder holds no game the mod can take stages from");
+		SetStatus("No supported game found in that folder.");
 		return false;
 	}
 
@@ -466,7 +466,7 @@ bool StageImport::Scan(const char* folder)
 
 	if (source == nullptr)
 	{
-		SetStatus("the stage data of %s could not be opened", FbGameFolder::Name(game));
+		SetStatus("Could not open the stage files of %s.", FbGameFolder::Name(game));
 		return false;
 	}
 
@@ -489,14 +489,14 @@ bool StageImport::Scan(const char* folder)
 
 	if (g_offers.empty())
 	{
-		SetStatus("no stage was found in %s", FbGameFolder::Name(game));
+		SetStatus("No stages found in %s.", FbGameFolder::Name(game));
 		return false;
 	}
 
 	g_scanFolder = folder;
 	g_scanGame = FbGameFolder::Name(game);
 
-	SetStatus("%d stage(s) in %s", OfferCount(), g_scanGame.c_str());
+	SetStatus("%d stage(s) found in %s.", OfferCount(), g_scanGame.c_str());
 	return true;
 }
 
@@ -553,9 +553,9 @@ bool StageImport::InstallMany(const int* indices, const char* const* names, int 
 		return false;
 
 	if (batch->jobs.size() == 1)
-		SetStatus("installing %s...", batch->jobs.front().name.c_str());
+		SetStatus("Installing %s...", batch->jobs.front().name.c_str());
 	else
-		SetStatus("installing %d stage(s)...", static_cast<int>(batch->jobs.size()));
+		SetStatus("Installing %d stage(s)...", static_cast<int>(batch->jobs.size()));
 
 	return Start(std::move(batch));
 }
@@ -579,7 +579,7 @@ bool StageImport::InstallFolder(const char* folder, const char* name)
 	batch->custom = true;
 	batch->jobs.push_back({ Leaf(path), CleanName(name), std::string(), path, number });
 
-	SetStatus("installing %s...", Leaf(path).c_str());
+	SetStatus("Installing %s...", Leaf(path).c_str());
 	return Start(std::move(batch));
 }
 
@@ -590,7 +590,7 @@ bool StageImport::ReplaceFolder(const char* folder, int number)
 
 	if (number == StageLibrary::kRandomStage || !GameStages::Owns(number))
 	{
-		SetStatus("stage %d is not one of the game's own", number);
+		SetStatus("Stage %d is not one of the game's stages.", number);
 		return false;
 	}
 
@@ -602,7 +602,7 @@ bool StageImport::ReplaceFolder(const char* folder, int number)
 	batch->replace = true;
 	batch->jobs.push_back({ Leaf(path), std::string(), std::string(), path, number });
 
-	SetStatus("replacing stage %d with %s...", number, Leaf(path).c_str());
+	SetStatus("Replacing stage %d with %s...", number, Leaf(path).c_str());
 	return Start(std::move(batch));
 }
 
@@ -615,7 +615,7 @@ bool StageImport::Restore(int number)
 	ModFiles::Rescan();
 	StageRevision::Bump();
 
-	SetStatus("stage %d is the game's own again. Restart the game to see it", number);
+	SetStatus("Stage %d is restored. Restart the game to see it.", number);
 	LOG("StageImport: stage %d is restored", number);
 	return true;
 }
@@ -631,7 +631,7 @@ bool StageImport::Remove(int number)
 	StageLibrary::Erase(number);
 	ModFiles::Rescan();
 
-	SetStatus("%s is removed and its files are deleted. Restart the game to see it gone", entry.name.c_str());
+	SetStatus("%s is removed and its folder deleted. The game drops it after a restart.", entry.name.c_str());
 	LOG("StageImport: stage %d '%s' is removed and its files are deleted", number, entry.name.c_str());
 	return true;
 }
@@ -647,7 +647,8 @@ bool StageImport::SetInGame(int number, bool inGame)
 		return false;
 
 	StageLibrary::Show(number, inGame);
-	SetStatus("%s %s the stage picker. Restart the game to see it", entry.name.c_str(), inGame ? "joins" : "leaves");
+	SetStatus("%s %s the stage picker. Restart the game to see it.", entry.name.c_str(), inGame ? "added to" :
+		"removed from");
 	return true;
 }
 
@@ -657,7 +658,7 @@ bool StageImport::Unlock(int number, bool unlocked)
 		return false;
 
 	HiddenStages::SetUnlocked(number, unlocked);
-	SetStatus("stage %d is %s. Restart the game to see it", number, unlocked ? "unlocked" : "hidden again");
+	SetStatus("Stage %d is %s. Restart the game to see it.", number, unlocked ? "unlocked" : "hidden again");
 	return true;
 }
 

@@ -30,7 +30,7 @@ ColourGetter_t oSpecular = nullptr;
 AlphaGetter_t oBokashi = nullptr;
 
 bool g_hooked = false;
-const char* g_status = "the character light getters were not found in this build";
+const char* g_status = "not found in this game version";
 
 int Percent()
 {
@@ -181,7 +181,7 @@ void CharacterLight::Install()
 		HookManager::CreateHook(getters.bokashi, reinterpret_cast<void*>(&HookedBokashi),
 			reinterpret_cast<void**>(&oBokashi), "character bokashi getter");
 
-	g_status = g_hooked ? "" : "the character light getters could not be hooked";
+	g_status = g_hooked ? "" : "could not be turned on";
 	LOG("CharacterLight: %s", g_hooked ? "ready" : g_status);
 }
 

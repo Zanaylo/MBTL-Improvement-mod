@@ -162,16 +162,16 @@ bool PngPalette::Read(const std::string& path, uint8_t* outRgba, std::string& ou
 	std::vector<uint8_t> file;
 
 	if (!ReadWholeFile(path, file))
-		return Fail(outError, "could not read the file");
+		return Fail(outError, "Could not read the file.");
 
 	if (!IsPng(file.data(), file.size()))
-		return Fail(outError, "not a PNG file");
+		return Fail(outError, "Not a PNG file.");
 
 	uint32_t length = 0;
 	const size_t chunk = FindPalette(file, length);
 
 	if (chunk == 0)
-		return Fail(outError, "this PNG has no palette. Save it as an indexed 8 bit image, not RGB");
+		return Fail(outError, "This PNG has no palette. Save it as an indexed 8 bit PNG, not RGB.");
 
 	const int entries = static_cast<int>(length / 3) < kEntries ? static_cast<int>(length / 3) : kEntries;
 	const uint8_t* const colours = file.data() + chunk + kChunkHeader;
@@ -218,21 +218,21 @@ bool PngPalette::Write(const std::string& path, const uint8_t* rgba, std::string
 	WriteChunk(file, "IDAT", data.data(), data.size());
 	WriteChunk(file, "IEND", nullptr, 0);
 
-	return WriteWholeFile(path, file.data(), file.size()) || Fail(outError, "could not write the file");
+	return WriteWholeFile(path, file.data(), file.size()) || Fail(outError, "Could not write the file.");
 }
 
 bool PngPalette::Recolour(const std::string& path, const uint8_t* basePng, size_t baseSize, const uint8_t* rgba,
 	std::string& outError)
 {
 	if (rgba == nullptr || !IsPng(basePng, baseSize))
-		return Fail(outError, "the base image is not a PNG");
+		return Fail(outError, "The reference image is not a PNG.");
 
 	std::vector<uint8_t> file(basePng, basePng + baseSize);
 	uint32_t length = 0;
 	const size_t chunk = FindPalette(file, length);
 
 	if (chunk == 0)
-		return Fail(outError, "the base image has no palette to replace");
+		return Fail(outError, "The reference image has no palette.");
 
 	const int entries = static_cast<int>(length / 3) < kEntries ? static_cast<int>(length / 3) : kEntries;
 	const size_t body = chunk + kChunkHeader;
@@ -242,5 +242,5 @@ bool PngPalette::Recolour(const std::string& path, const uint8_t* basePng, size_
 
 	PutBig32(file.data() + body + length, Crc32(file.data() + chunk + kTypeLength, kTypeLength + length));
 
-	return WriteWholeFile(path, file.data(), file.size()) || Fail(outError, "could not write the file");
+	return WriteWholeFile(path, file.data(), file.size()) || Fail(outError, "Could not write the file.");
 }

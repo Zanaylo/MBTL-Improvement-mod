@@ -18,7 +18,7 @@ StageGate_t oStageGate = nullptr;
 bool g_installed = false;
 volatile LONG g_enabled = 0;
 volatile LONG g_rgb = 0;
-const char* g_status = "the stage ready check was not found in this build";
+const char* g_status = "not supported by this game version";
 
 bool __fastcall HookedStageGate(void* self, void* unused)
 {
@@ -43,7 +43,7 @@ bool StageColor::Install()
 	g_installed = HookManager::CreateHook(const_cast<uint8_t*>(gate), reinterpret_cast<void*>(&HookedStageGate),
 		reinterpret_cast<void**>(&oStageGate), "stage ready check");
 
-	g_status = g_installed ? "ready" : "the stage ready check could not be hooked";
+	g_status = g_installed ? "ready" : "could not hook the stage drawing";
 	return g_installed;
 }
 

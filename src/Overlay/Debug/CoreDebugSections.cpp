@@ -73,10 +73,10 @@ void HooksDebugSection::Draw()
 	std::vector<Anchors::Anchor> anchors;
 	Anchors::Snapshot(anchors);
 
-	ImGui::SeparatorText("Resolved game addresses");
+	ImGui::SeparatorText("Game addresses found");
 
 	if (anchors.empty())
-		UiText::Muted("Nothing has been resolved yet.");
+		UiText::Muted("No addresses found yet.");
 
 	if (!anchors.empty() && ImGui::BeginTable("##anchors", 3, kTableFlags))
 	{
@@ -125,7 +125,7 @@ void HooksDebugSection::Draw()
 		ImGui::TableNextColumn();
 		ImGui::TextUnformatted(hook.where.c_str());
 		ImGui::TableNextColumn();
-		ImGui::TextUnformatted(hook.enabled ? "enabled" : "created");
+		ImGui::TextUnformatted(hook.enabled ? "on" : "not on yet");
 	}
 
 	ImGui::EndTable();
@@ -136,7 +136,7 @@ void DeviceDebugSection::Draw()
 	const D3DPRESENT_PARAMETERS& present = DeviceHooks::GetPresentParameters();
 
 	if (!DeviceHooks::IsInstalled())
-		UiText::Warn("No Direct3D device has been hooked.");
+		UiText::Warn("No Direct3D device hooked yet.");
 
 	ImGui::Text("Back buffer %ux%u, %s, %u Hz", present.BackBufferWidth, present.BackBufferHeight,
 		present.Windowed ? "windowed" : "fullscreen", present.FullScreen_RefreshRateInHz);
@@ -174,7 +174,7 @@ void MemoryDebugSection::Draw()
 	ImGui::SliderInt("Rows", &m_rows, 1, kMostRows);
 
 	ImGui::SameLine();
-	ImGui::Checkbox("Dwords", &m_dwords);
+	ImGui::Checkbox("4 byte values", &m_dwords);
 
 	DrawRows();
 }

@@ -48,7 +48,7 @@ volatile int g_side = -1;
 volatile uint64_t g_peer = 0;
 bool g_sessionSeen = false;
 
-char g_status[160] = "not started";
+char g_status[160] = "Not started.";
 
 void __cdecl NoteStart(const uint32_t* args)
 {
@@ -196,7 +196,7 @@ bool Initialize()
 
 	if (!g_api.messages || !g_api.send || !g_api.receive || !g_api.release || !g_api.setIdentity || !g_api.getIdentity)
 	{
-		strncpy_s(g_status, "steam_api.dll lacks the networking calls", _TRUNCATE);
+		strncpy_s(g_status, "steam_api.dll has no networking functions", _TRUNCATE);
 		g_attempts = Netplay::kMostAttempts;
 		return false;
 	}
@@ -205,7 +205,7 @@ bool Initialize()
 
 	if (g_api.self == nullptr)
 	{
-		strncpy_s(g_status, "Steam networking is not up yet", _TRUNCATE);
+		strncpy_s(g_status, "Steam networking is not ready yet", _TRUNCATE);
 		return false;
 	}
 

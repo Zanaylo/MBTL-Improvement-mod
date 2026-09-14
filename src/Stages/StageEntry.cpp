@@ -29,7 +29,7 @@ const char* const kZeroedFields[] = { "ViewRotationX", "ViewTranslationY" };
 
 constexpr const char* kWalls = "StageW";
 
-const char* const kOwnFields[] = { "Name", "From", "Source", "DataFile" };
+const char* const kOwnFields[] = { "Name", "From", "Source", "DataFile", "CharaTint" };
 
 const char* const kSharedFields[] = {
 	"StageW", "BlanchStage", "BlanchChara", "SelectDisable", "RandomDisable", "VsDisable", "DLCFlag",

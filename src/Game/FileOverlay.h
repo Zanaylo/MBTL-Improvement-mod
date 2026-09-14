@@ -10,7 +10,9 @@ public:
 	virtual ~IFileOverlay() = default;
 
 	virtual bool Covers(const std::string& key) const = 0;
+	virtual std::string Redirect(const std::string&, const char* requested) const { return requested; }
 	virtual std::string BasePath(const std::string&, const char* requested) const { return requested; }
+	virtual bool Changes(const std::string&) const { return true; }
 	virtual bool Apply(const std::string& key, std::vector<uint8_t>& content) const = 0;
 	virtual uint32_t Version() const = 0;
 };

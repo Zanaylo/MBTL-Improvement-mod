@@ -37,22 +37,15 @@ using Span = BgListText::Span;
 constexpr const char* kListKey = "bg\\bglist.txt";
 constexpr const char* kNamesKey = "bg\\bglist_str.ini";
 constexpr const char* kMusicKey = "bgm\\bgm.txt";
-constexpr const char* kVsPrefix = "grpdat\\vsscreen\\vs_bg\\vs_demo_bg";
-constexpr const char* kVsSuffix = ".pat";
-constexpr const char* kVsDonor = "01";
 constexpr const char* kNamesSection = "[data]";
 constexpr const char* kTrackHeader = "[BGM_";
 constexpr int kTemplateNumber = 1;
 constexpr int kFallbackCard = 1;
 
-constexpr int kShippedVs[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
-	25, 26, 27, 28, 29, 30, 32, 90 };
-
 std::atomic<uint32_t> g_listBytes{ 0 };
 std::atomic<int> g_listApplied{ 0 };
 std::atomic<int> g_namesApplied{ 0 };
 std::atomic<int> g_musicApplied{ 0 };
-std::atomic<int> g_vsServed{ 0 };
 
 struct Edit
 {
@@ -381,24 +374,6 @@ std::string Renamed(const std::string& text, const Section& donor, int number, c
 	return body;
 }
 
-int VsNumber(const std::string& key)
-{
-	const size_t prefix = strlen(kVsPrefix);
-
-	if (key.compare(0, prefix, kVsPrefix) != 0)
-		return -1;
-
-	size_t at = prefix;
-
-	while (at < key.size() && isdigit(static_cast<unsigned char>(key[at])) != 0)
-		++at;
-
-	if (at == prefix || key.compare(at, std::string::npos, kVsSuffix) != 0)
-		return -1;
-
-	return atoi(key.c_str() + prefix);
-}
-
 class BgListOverlay : public IFileOverlay
 {
 public:
@@ -532,40 +507,6 @@ public:
 		++g_musicApplied;
 		return true;
 	}
-};
-
-class VsBackgroundOverlay : public IFileOverlay
-{
-public:
-	bool Covers(const std::string& key) const override
-	{
-		const int number = VsNumber(key);
-
-		if (number <= 0 || std::find(std::begin(kShippedVs), std::end(kShippedVs), number) != std::end(kShippedVs))
-			return false;
-
-		return StageLibrary::Installed(number) || HiddenStages::Unlocked(number);
-	}
-
-	std::string BasePath(const std::string&, const char* requested) const override
-	{
-		std::string path = requested;
-		const size_t dot = path.rfind('.');
-		size_t digits = dot;
-
-		while (digits != std::string::npos && digits > 0 && isdigit(static_cast<unsigned char>(path[digits - 1])) != 0)
-			--digits;
-
-		if (dot == std::string::npos || digits == dot)
-			return path;
-
-		path.replace(digits, dot - digits, kVsDonor);
-		++g_vsServed;
-		return path;
-	}
-
-	bool Apply(const std::string&, std::vector<uint8_t>&) const override { return false; }
-	uint32_t Version() const override { return StageRevision::Current(); }
 };
 
 struct StageImage
@@ -732,7 +673,6 @@ StageTextExport g_exportOverlay;
 BgListOverlay g_listOverlay;
 BgNamesOverlay g_namesOverlay;
 StageMusicOverlay g_musicOverlay;
-VsBackgroundOverlay g_vsOverlay;
 StageColourOverlay g_colourOverlay;
 StageLightingOverlay g_lightingOverlay;
 
@@ -744,7 +684,6 @@ void StageOverlays::Register()
 	ModFiles::AddOverlay(&g_listOverlay);
 	ModFiles::AddOverlay(&g_namesOverlay);
 	ModFiles::AddOverlay(&g_musicOverlay);
-	ModFiles::AddOverlay(&g_vsOverlay);
 	ModFiles::AddOverlay(&g_colourOverlay);
 	ModFiles::AddOverlay(&g_lightingOverlay);
 }
@@ -756,7 +695,6 @@ StageOverlays::Stats StageOverlays::Snapshot()
 	stats.listApplied = g_listApplied.load();
 	stats.namesApplied = g_namesApplied.load();
 	stats.musicApplied = g_musicApplied.load();
-	stats.vsServed = g_vsServed.load();
 
 	return stats;
 }

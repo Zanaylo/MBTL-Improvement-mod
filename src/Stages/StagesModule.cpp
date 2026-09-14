@@ -10,8 +10,11 @@
 #include "Stages/StageImport.h"
 #include "Stages/StageLibrary.h"
 #include "Stages/StageOverlays.h"
+#include "Stages/StagePictures.h"
 #include "Stages/StageThumbs.h"
+#include "Stages/StageTint.h"
 #include "Stages/StagesDebugSection.h"
+#include "Training/FrameStepper.h"
 
 namespace {
 
@@ -33,9 +36,12 @@ void StagesModule::Install()
 	StageLibrary::Load();
 	StageOverlays::Register();
 	StageThumbs::Register();
+	StagePictures::Register();
 	StageBloom::Install();
 	CharacterLight::Install();
+	StageTint::Install();
 
+	FrameStepper::AddTickListener(StageTint::Listener());
 	DeviceHooks::AddListener(&g_listener);
 	DebugSections::Add(&g_debug);
 

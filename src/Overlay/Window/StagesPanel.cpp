@@ -240,7 +240,73 @@ void StagesPanel::DrawInstalled()
 	DrawLighting();
 	DrawHidden();
 	DrawReplaced();
+	DrawMenuStage();
 	DrawLibrary();
+}
+
+void StagesPanel::DrawMenuStage()
+{
+	ImGui::SeparatorText("Main menu");
+
+	const int chosen = g_settings.menuBackgroundStage;
+	char preview[96] = "Game default (random)";
+
+	if (chosen > 0)
+		sprintf_s(preview, "Stage %03d", chosen);
+
+	for (const GameStages::Own& own : m_own)
+	{
+		if (own.number == chosen)
+			OwnLabel(own, preview, sizeof(preview));
+	}
+
+	for (const Entry& entry : m_entries)
+	{
+		if (entry.number == chosen)
+			sprintf_s(preview, "%03d  %s", entry.number, entry.name.c_str());
+	}
+
+	Ui::SetItemWidth(kReplaceWidth);
+
+	if (ImGui::BeginCombo("Main menu background", preview))
+	{
+		DrawMenuChoice(0, "Game default (random)");
+
+		for (const GameStages::Own& own : m_own)
+		{
+			char label[96] = {};
+			OwnLabel(own, label, sizeof(label));
+			DrawMenuChoice(own.number, label);
+		}
+
+		for (const Entry& entry : m_entries)
+		{
+			char label[96] = {};
+			sprintf_s(label, "%03d  %s", entry.number, entry.name.c_str());
+			DrawMenuChoice(entry.number, label);
+		}
+
+		ImGui::EndCombo();
+	}
+
+	UiText::Help("For testing. The main menu always shows this stage's background instead of a random one. It "
+		"applies the next time the main menu opens. Game default goes back to a random stage.");
+}
+
+void StagesPanel::DrawMenuChoice(int number, const char* label)
+{
+	const bool selected = number == g_settings.menuBackgroundStage;
+
+	ImGui::PushID(number);
+
+	if (ImGui::Selectable(label, selected))
+	{
+		g_settings.menuBackgroundStage = number;
+		Settings::SaveInt("Stages", "MenuBackgroundStage", number);
+	}
+
+	ComboNav::KeepSelectedInView(selected);
+	ImGui::PopID();
 }
 
 void StagesPanel::DrawReplaced()
@@ -612,7 +678,10 @@ void StagesPanel::DrawCustom()
 	UiText::Help("Pick a folder with bg.fbx.bin and its textures.\n\nstage.txt (optional) can set a Name and any "
 		"BgList value: camera, fog, bloom, shadows, StageSelTex and so on. Write them as a plain list or as a "
 		"whole Bg_NNN = { } block. Every value is used except StageW, which always stays at the game's value so "
-		"walls match online.\n\nthumbnail.png or thumbnail.dds (optional) is always used as the stage select card.");
+		"walls match online.\n\nOptional pictures, PNG or DDS:\nthumbnail: the stage select card.\nvs_background: the "
+		"picture behind the characters before a match (2:1, for example 2048x1024).\nmenu_background: the main menu "
+		"background (16:9, for example 1920x1080).\nWithout them the stage uses stage 1's pictures.\n\nCharaTint = 0x141414 "
+		"in stage.txt draws the characters in that colour on this stage, like a dark silhouette. Offline only.");
 }
 
 void StagesPanel::DrawReplace()

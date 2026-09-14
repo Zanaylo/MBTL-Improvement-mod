@@ -10,7 +10,6 @@ namespace StageOverlays
 		int listApplied;
 		int namesApplied;
 		int musicApplied;
-		int vsServed;
 	};
 
 	void Register();

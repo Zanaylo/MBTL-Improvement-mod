@@ -33,6 +33,8 @@ private:
 	void DrawLighting();
 	void DrawHidden();
 	void DrawReplaced();
+	void DrawMenuStage();
+	void DrawMenuChoice(int number, const char* label);
 	void DrawLibrary();
 	void DrawEntry(const StageLibrary::Entry& entry);
 	void DrawCard(const StageLibrary::Entry& entry);

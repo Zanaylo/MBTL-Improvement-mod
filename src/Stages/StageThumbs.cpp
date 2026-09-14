@@ -1,7 +1,5 @@
 #include "Stages/StageThumbs.h"
 
-#include "Core/DdsImage.h"
-#include "Core/PngImage.h"
 #include "Core/logger.h"
 #include "Core/utils.h"
 #include "Game/FileOverlay.h"
@@ -9,12 +7,11 @@
 #include "Game/ModFiles.h"
 #include "Stages/GameStages.h"
 #include "Stages/StageCards.h"
+#include "Stages/StageImage.h"
 #include "Stages/StageLibrary.h"
 #include "Stages/StageReplacements.h"
 #include "Stages/StageRevision.h"
 #include "Stages/StageTable.h"
-
-#include <windows.h>
 
 #include <algorithm>
 #include <cstdio>
@@ -26,7 +23,7 @@ namespace {
 namespace Cards = GameOffsets::Cards;
 
 constexpr const char* kSheetKey = "grpdat\\csel\\stage_thumb01.dds";
-constexpr const char* kThumbFiles[] = { "thumbnail.png", "thumbnail.dds" };
+constexpr const char* kThumbName = "thumbnail";
 constexpr const char* kMagic = "DDS ";
 constexpr size_t kMagicBytes = 4;
 constexpr size_t kDdsHeader = 128;
@@ -108,24 +105,9 @@ int CardLimit()
 	return StageCards::IsAvailable() ? Cards::kPerSheet + kMostRows * Cards::kPerRow - 1 : StageCards::kStockLastCard;
 }
 
-std::string ThumbOf(int number)
-{
-	const std::string folder = StageLibrary::FolderOf(number);
-
-	for (const char* file : kThumbFiles)
-	{
-		const std::string path = folder + "\\" + file;
-
-		if (GetFileAttributesA(path.c_str()) != INVALID_FILE_ATTRIBUTES)
-			return path;
-	}
-
-	return std::string();
-}
-
 bool HasThumb(int number)
 {
-	return !ThumbOf(number).empty();
+	return !StageImage::Find(number, kThumbName).empty();
 }
 
 void Candidates(std::vector<int>& out)
@@ -213,60 +195,29 @@ std::vector<uint8_t> MaskOf(std::vector<uint8_t>& sheet)
 	return lit ? mask : std::vector<uint8_t>();
 }
 
-void Average(const std::vector<uint8_t>& image, int imageWidth, int left, int top, int right, int bottom, uint8_t* out)
-{
-	unsigned totals[kChannels] = {};
-	unsigned count = 0;
-
-	for (int y = top; y < bottom; ++y)
-	{
-		for (int x = left; x < right; ++x)
-		{
-			const uint8_t* const in = &image[(static_cast<size_t>(y) * imageWidth + x) * kChannels];
-
-			for (size_t channel = 0; channel < kChannels; ++channel)
-				totals[channel] += in[channel];
-
-			++count;
-		}
-	}
-
-	for (size_t channel = 0; channel < kChannels; ++channel)
-		out[channel] = static_cast<uint8_t>(totals[channel] / count);
-}
-
-void CopyCell(std::vector<uint8_t>& sheet, const std::vector<uint8_t>& image, size_t originX, size_t originY)
+void CopyCell(std::vector<uint8_t>& sheet, const StageImage::Bitmap& image, size_t originX, size_t originY)
 {
 	for (size_t y = 0; y < Cards::kCellHeight; ++y)
-		std::memcpy(PixelAt(sheet, originX, originY + y), &image[y * Cards::kCellWidth * kChannels], Cards::kCellWidth * kChannels);
+		std::memcpy(PixelAt(sheet, originX, originY + y), &image.bgra[y * Cards::kCellWidth * kChannels], Cards::kCellWidth * kChannels);
 }
 
-void CoverArt(std::vector<uint8_t>& sheet, const std::vector<uint8_t>& mask, const std::vector<uint8_t>& image, int width,
-	int height, size_t originX, size_t originY)
+void CoverArt(std::vector<uint8_t>& sheet, const std::vector<uint8_t>& mask, const StageImage::Bitmap& image, size_t originX,
+	size_t originY)
 {
-	const bool wide = static_cast<int64_t>(width) * Cards::kArtHeight > static_cast<int64_t>(height) * Cards::kArtWidth;
-	const int sourceWidth = wide ? (std::max)(height * Cards::kArtWidth / Cards::kArtHeight, 1) : width;
-	const int sourceHeight = wide ? height : (std::max)(width * Cards::kArtHeight / Cards::kArtWidth, 1);
-	const int sourceX = (width - sourceWidth) / 2;
-	const int sourceY = (height - sourceHeight) / 2;
+	const StageImage::Bitmap art = StageImage::Cover(image, Cards::kArtWidth, Cards::kArtHeight);
 
 	for (size_t y = 0; y < Cards::kCellHeight; ++y)
 		std::memset(PixelAt(sheet, originX, originY + y), 0, Cards::kCellWidth * kChannels);
 
 	for (int row = 0; row < Cards::kArtHeight; ++row)
 	{
-		const int top = sourceY + row * sourceHeight / Cards::kArtHeight;
-		const int bottom = (std::max)(sourceY + (row + 1) * sourceHeight / Cards::kArtHeight, top + 1);
-
 		for (int column = 0; column < Cards::kArtWidth; ++column)
 		{
-			const int left = sourceX + column * sourceWidth / Cards::kArtWidth;
-			const int right = (std::max)(sourceX + (column + 1) * sourceWidth / Cards::kArtWidth, left + 1);
 			const size_t cellX = static_cast<size_t>(Cards::kArtX) + column;
 			const size_t cellY = static_cast<size_t>(Cards::kArtY) + row;
 			uint8_t* const out = PixelAt(sheet, originX + cellX, originY + cellY);
 
-			Average(image, width, left, top, right, bottom, out);
+			std::memcpy(out, &art.bgra[(static_cast<size_t>(row) * Cards::kArtWidth + column) * kChannels], kChannels);
 
 			if (!mask.empty())
 				out[3] = static_cast<uint8_t>(out[3] * mask[cellY * Cards::kCellWidth + cellX] / kOpaque);
@@ -276,30 +227,22 @@ void CoverArt(std::vector<uint8_t>& sheet, const std::vector<uint8_t>& mask, con
 
 bool Paint(std::vector<uint8_t>& sheet, const std::vector<uint8_t>& mask, const StageThumbs::Card& card)
 {
-	const std::string path = ThumbOf(card.number);
-	std::vector<uint8_t> blob;
-	std::vector<uint8_t> image;
-	int width = 0;
-	int height = 0;
+	StageImage::Bitmap image;
 
-	if (!ReadWholeFile(path, blob) ||
-		(!PngImage::Decode(blob, width, height, image) && !DdsImage::Decode(blob, width, height, image)))
-	{
-		LOG("StageThumbs: %s is not a PNG or DDS the mod can read", path.c_str());
+	if (!StageImage::Load(StageImage::Find(card.number, kThumbName), image))
 		return false;
-	}
 
 	const int local = card.card - Cards::kPerSheet;
 	const size_t originX = static_cast<size_t>(local % Cards::kPerRow) * Cards::kCellWidth;
 	const size_t originY = static_cast<size_t>(local / Cards::kPerRow) * Cards::kCellHeight;
 
-	if (width == static_cast<int>(Cards::kCellWidth) && height == static_cast<int>(Cards::kCellHeight))
+	if (image.width == static_cast<int>(Cards::kCellWidth) && image.height == static_cast<int>(Cards::kCellHeight))
 	{
 		CopyCell(sheet, image, originX, originY);
 		return true;
 	}
 
-	CoverArt(sheet, mask, image, width, height, originX, originY);
+	CoverArt(sheet, mask, image, originX, originY);
 	return true;
 }
 

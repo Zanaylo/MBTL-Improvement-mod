@@ -5,6 +5,8 @@
 #include "Stages/HiddenStages.h"
 #include "Stages/StageLibrary.h"
 #include "Stages/StageOverlays.h"
+#include "Stages/StagePictures.h"
+#include "Stages/StageTint.h"
 #include "Stages/StagePicker.h"
 #include "Stages/StageRevision.h"
 #include "Stages/StageTable.h"
@@ -138,5 +140,7 @@ void StagesDebugSection::DrawOverlays()
 	ImGui::Text("BgList_str.ini extended %d time(s)", stats.namesApplied);
 	ImGui::Text("bgm.txt extended %d time(s), %s", stats.musicApplied,
 		GameStages::TracksLearned() ? "tracks read" : "tracks not read yet");
-	ImGui::Text("Versus screen backgrounds lent %d time(s)", stats.vsServed);
+	ImGui::Text("VS and menu backgrounds: stage 1's lent %d time(s), stage pictures painted %d time(s)",
+		StagePictures::Lent(), StagePictures::Painted());
+	ImGui::Text("Character tint: %s", StageTint::StatusText());
 }

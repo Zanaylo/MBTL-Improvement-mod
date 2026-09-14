@@ -519,6 +519,42 @@ namespace GameOffsets
 		inline constexpr size_t kDdsHeaderBytes = 16;
 	}
 
+	namespace Tint
+	{
+		inline constexpr const char* kLoaderAnchor = "%s\\%s\\bg.fbx";
+		inline constexpr uint8_t kStoreStage[] = { 0x8B, 0x4D, 0x08, 0x89, 0x0D };
+		inline constexpr size_t kStoreStageDispAt = 5;
+
+		inline constexpr uintptr_t kTint = 0x3B4;
+		inline constexpr uintptr_t kTimeAt = 0x4;
+		inline constexpr uintptr_t kTotalAt = 0x6;
+		inline constexpr uintptr_t kInAt = 0x8;
+		inline constexpr uintptr_t kTypeAt = 0xA;
+		inline constexpr uint8_t kTypeSolid = 3;
+		inline constexpr int16_t kHoldFrames = 3;
+		inline constexpr int kSeats = 4;
+	}
+
+	namespace Pictures
+	{
+		inline constexpr const char* kVsPrefix = "grpdat\\vsscreen\\vs_bg\\vs_demo_bg";
+		inline constexpr const char* kMenuPrefix = "grpdat\\menucommon\\menu_bg";
+		inline constexpr const char* kSuffix = ".pat";
+		inline constexpr int kDonorNumber = 1;
+
+		inline constexpr uint8_t kTextureTag[] = { 'P', 'G', 'T', '2' };
+		inline constexpr uint8_t kDdsMagic[] = { 'D', 'D', 'S', ' ' };
+		inline constexpr size_t kTextureBytesAt = 4;
+		inline constexpr size_t kTextureWidthAt = 8;
+		inline constexpr size_t kTextureHeightAt = 12;
+		inline constexpr size_t kTextureFormatAt = 16;
+		inline constexpr size_t kTextureDdsAt = 28;
+		inline constexpr size_t kDdsHeader = 128;
+		inline constexpr uint32_t kFormatBgra = 21;
+		inline constexpr int kVsSide = 1024;
+		inline constexpr int kMenuSide = 2048;
+	}
+
 	namespace Music
 	{
 		inline constexpr const char* kLoaderAnchor = "BGM_%03d";

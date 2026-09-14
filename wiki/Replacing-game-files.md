@@ -58,6 +58,37 @@ By hand: `StageSelTex` 0 to 20 are on `grpdat\CSel\stage_thumb00.dds`, 21 and up
 cards per row of 144x336 pixels. The game's own art stops at card 30. To add rows, make
 `MBTL-IM\Mods\grpdat\CSel\stage_thumb01.dds` taller with a power of two height: 1024x2048 reaches card 62.
 
+## VS screen and main menu pictures
+
+Two more pictures can sit next to `bg.fbx.bin`, as PNG or DDS:
+
+| File | Where it shows | Best size |
+|---|---|---|
+| `vs_background.png` | behind the characters before a match | 2:1, such as 2048x1024 |
+| `menu_background.png` | the main menu background | 16:9, such as 1920x1080 |
+
+Keep the important part of the VS picture away from the top and bottom edges, the game fades them out. The main
+menu shows a random stage, so a stage only appears there when the random stage filter allows it. To test a menu
+picture, pick the stage in Stages > Installed stages > Main menu background, then open the main menu. Set it back to
+Game default when you are done.
+
+For each stage the mod picks, in this order: the picture in the stage folder, a `menu_bgNN.pat` or
+`vs_demo_bgNN.pat` from another mod, the game's own file, and finally stage 1's picture, so the screen is never
+black or empty. A picture in `Mods\bg\bgNNN` for one of the game's own stage numbers replaces that stage's picture
+too. Changes show after a restart.
+
+## Darker characters on a stage
+
+Add this line to a stage's `stage.txt`:
+
+```
+CharaTint = 0x141414
+```
+
+On that stage the characters are drawn in that colour, like the dark silhouettes of Last corridor. The value is a
+colour written as 0xRRGGBB: `0x000000` is black, `0x808080` is half dark, `0xFFFFFF` changes nothing. It only works
+offline, and moves that change the character's colour themselves are covered while the tint is on.
+
 ## Removing a stage
 
 Remove, under Installed stages, deletes the stage's folder and takes it off the list right away. The game still

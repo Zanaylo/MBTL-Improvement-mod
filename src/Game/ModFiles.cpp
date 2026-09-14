@@ -224,6 +224,32 @@ int Serve(void* reader, const std::vector<uint8_t>* data)
 	return g_fromMemory(reader, nullptr, data->data(), static_cast<uint32_t>(data->size()));
 }
 
+bool AnyChanges(const std::vector<const IFileOverlay*>& overlays, const std::string& key)
+{
+	for (const IFileOverlay* overlay : overlays)
+	{
+		if (overlay->Changes(key))
+			return true;
+	}
+
+	return false;
+}
+
+int OpenOrLend(const OpenRequest& request, void* unused, const std::string& key, const IFileOverlay& overlay)
+{
+	const int opened = oReaderOpen(request.reader, unused, request.path, request.first, request.second, request.third);
+
+	if (opened)
+		return opened;
+
+	const std::string base = overlay.BasePath(key, request.path);
+
+	if (base == request.path)
+		return opened;
+
+	return oReaderOpen(request.reader, unused, base.c_str(), request.first, request.second, request.third);
+}
+
 int __fastcall HookedReaderOpen(void* reader, void* unused, const char* path, int first, int second, int third)
 {
 	if (!path || !*path)
@@ -240,7 +266,15 @@ int __fastcall HookedReaderOpen(void* reader, void* unused, const char* path, in
 		return oReaderOpen(reader, unused, path, first, second, third);
 	}
 
+	const std::string redirected = overlays.empty() ? std::string(path) : overlays.front()->Redirect(key, path);
+
+	if (redirected != path)
+		return HookedReaderOpen(reader, unused, redirected.c_str(), first, second, third);
+
 	const OpenRequest request = { reader, path, first, second, third };
+
+	if (!onDisk && !AnyChanges(overlays, key))
+		return OpenOrLend(request, unused, key, *overlays.front());
 	const std::vector<uint8_t>* const data = overlays.empty() ? g_cache.Get(key, disk)
 		: Compose(request, key, overlays, onDisk ? &disk : nullptr);
 

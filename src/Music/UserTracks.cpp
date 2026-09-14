@@ -78,12 +78,12 @@ const char* OggProblem(const std::string& path)
 		return "that file could not be read, or is too short to be music";
 
 	if (std::memcmp(head, kPageMagic, sizeof(kPageMagic)) != 0)
-		return "that is not an OGG file - convert it to OGG Vorbis first";
+		return "that is not an OGG file. Convert it to OGG Vorbis first";
 
 	const size_t packet = kFirstPacketAt + head[kSegmentCountAt];
 
 	if (packet + sizeof(kVorbisMagic) > read || std::memcmp(head + packet, kVorbisMagic, sizeof(kVorbisMagic)) != 0)
-		return "that OGG does not hold Vorbis audio (Opus or FLAC in OGG will not play) - convert it to OGG Vorbis";
+		return "that OGG does not hold Vorbis audio (Opus or FLAC in OGG will not play). Convert it to OGG Vorbis";
 
 	return nullptr;
 }

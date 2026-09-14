@@ -315,6 +315,9 @@
     <ClCompile Include="src\Stages\StageArchive.cpp">
       <Filter>Stages</Filter>
     </ClCompile>
+    <ClCompile Include="src\Stages\StageCards.cpp">
+      <Filter>Stages</Filter>
+    </ClCompile>
     <ClCompile Include="src\Stages\StageEntry.cpp">
       <Filter>Stages</Filter>
     </ClCompile>
@@ -331,6 +334,9 @@
       <Filter>Stages</Filter>
     </ClCompile>
     <ClCompile Include="src\Stages\StagePicker.cpp">
+      <Filter>Stages</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Stages\StageReplacements.cpp">
       <Filter>Stages</Filter>
     </ClCompile>
     <ClCompile Include="src\Stages\StageRevision.cpp">
@@ -371,6 +377,18 @@
     </ClCompile>
     <ClCompile Include="src\Training\TrainingModule.cpp">
       <Filter>Training</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Hooks\CodePatch.cpp">
+      <Filter>Hooks</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Core\PngImage.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Core\DdsImage.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Stages\StageThumbs.cpp">
+      <Filter>Stages</Filter>
     </ClCompile>
     <ClCompile Include="depends\minhook\src\buffer.c">
       <Filter>Dependencies\MinHook</Filter>
@@ -872,6 +890,21 @@
     <ClInclude Include="src\Stages\StageArchive.h">
       <Filter>Stages</Filter>
     </ClInclude>
+    <ClInclude Include="src\Stages\StageCards.h">
+      <Filter>Stages</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Core\DdsImage.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Core\PngImage.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Stages\StageThumbs.h">
+      <Filter>Stages</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Hooks\CodePatch.h">
+      <Filter>Hooks</Filter>
+    </ClInclude>
     <ClInclude Include="src\Stages\StageEntry.h">
       <Filter>Stages</Filter>
     </ClInclude>
@@ -888,6 +921,9 @@
       <Filter>Stages</Filter>
     </ClInclude>
     <ClInclude Include="src\Stages\StagePicker.h">
+      <Filter>Stages</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Stages\StageReplacements.h">
       <Filter>Stages</Filter>
     </ClInclude>
     <ClInclude Include="src\Stages\StageRevision.h">

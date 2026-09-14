@@ -72,10 +72,9 @@ void DrawUpscaleFilter()
 		Settings::SaveInt(kGraphics, "UpscaleFilter", chosen);
 	}
 
-	Help("When the game draws its scene into a texture smaller than the window and stretches it with a plain "
-		"bilinear filter, that stretch is the one place a better kernel can reach. Nothing is patched: the "
-		"engine is handed a texture that is already the size it is about to draw at.\n\n"
-		"It needs a back buffer larger than the scene texture, so raise the Improvements level first.");
+	Help("When the game draws its scene into a texture smaller than the window, it stretches it with a basic "
+		"bilinear filter. This replaces that stretch with a better one. Nothing in the game is patched.\n\nIt "
+		"needs a back buffer bigger than the scene texture, so raise the Improvements level first.");
 
 	Muted("%s", UpscaleFilter::Describe(current));
 	Muted("%s", SceneUpscale::GetStatusText());
@@ -94,7 +93,7 @@ void DrawAntiAliasing()
 		Settings::SaveInt(kGraphics, "AntiAliasing", chosen);
 	}
 
-	Help("FXAA over the finished frame. It softens the HUD text a little along with the edges.");
+	Help("FXAA over the finished frame. It also softens the HUD text a little.");
 
 	Muted("%s", AntiAlias::Describe(current));
 }
@@ -106,9 +105,9 @@ void DrawBloom()
 	if (ImGui::Checkbox("Bloom", &g_settings.bloomEnabled))
 		Settings::SaveBool(kGraphics, "Bloom", g_settings.bloomEnabled);
 
-	Help("The bright parts of the picture are cut out, blurred at a quarter of the size and screened back on.\n\n"
-		"Threshold is how bright a pixel has to be before it glows. Lower it and the whole frame hazes; raise it "
-		"and only the real highlights bloom.");
+	Help("Cuts out the bright parts of the picture, blurs them at a quarter size and blends them back on top.\n\n"
+		"Threshold is how bright a pixel must be to glow. Lower makes the whole frame hazy. Higher makes only real "
+		"highlights glow.");
 
 	if (!g_settings.bloomEnabled)
 		return;
@@ -132,7 +131,7 @@ void DrawSharpening()
 		Settings::SaveInt(kGraphics, "SharpenMode", chosen);
 	}
 
-	Help("Puts back the edge contrast a stretch to your window takes away. 40-60% is the useful range.");
+	Help("Restores the edge contrast lost when the picture is stretched to your window. 40 to 60% works best.");
 
 	Muted("%s", SharpenMode::Describe(mode));
 
@@ -151,7 +150,7 @@ void DrawLook()
 	if (ImGui::Checkbox("Colour and display", &g_settings.lookEnabled))
 		Settings::SaveBool(kGraphics, "Look", g_settings.lookEnabled);
 
-	Help("One pass over the finished frame. Off, none of the values below is read and no pass is drawn.");
+	Help("One pass over the finished frame. When off, the values below do nothing and no pass is drawn.");
 
 	if (!g_settings.lookEnabled)
 		return;
@@ -169,7 +168,7 @@ void DrawLook()
 	SavedSlider("Saturation", &g_settings.lookSaturation, -100, 100, "LookSaturation", "%d");
 
 	SavedSlider("Vibrance", &g_settings.lookVibrance, -100, 100, "LookVibrance", "%d");
-	Help("Saturation that leaves the colours already vivid alone and lifts the ones that are not.");
+	Help("Boosts dull colours and leaves colours that are already vivid alone.");
 
 	SavedSlider("Warmth", &g_settings.lookTemperature, -100, 100, "LookTemperature", "%d");
 	SavedSlider("Vignette", &g_settings.lookVignette, 0, 100, "LookVignette", "%d%%");
@@ -178,7 +177,7 @@ void DrawLook()
 	if (ImGui::Checkbox("Dither", &g_settings.lookDither))
 		Settings::SaveBool(kGraphics, "LookDither", g_settings.lookDither);
 
-	Help("A pixel of noise under the banding a gradient picks up on an 8 bit back buffer.");
+	Help("Adds a tiny amount of noise to hide colour banding in gradients.");
 
 	ImGui::Unindent();
 }
@@ -225,13 +224,12 @@ void DrawShaderPacks()
 	if (ImGui::Button("Rescan"))
 		ShaderPack::Refresh();
 
-	Help("Drop a shader in the Shaders folder beside the ini and pick it here. It is compiled when you select it "
-		"and runs last in the chain, over the finished frame.\n\n"
-		"Taken: .hlsl and .ps as they are, plus .fx, .slang, .glsl, .frag and .fsh, translated on the way in; the "
-		"translation is written to the Translated folder.\n\n"
-		"It is one pass and nothing else: a shader that needs a second pass, a lookup texture, the depth buffer or "
-		"the previous frame will translate and then be wrong. The folder's README has the bindings.\n\n"
-		"Compiling needs d3dcompiler_47.dll, which ships with Windows and with Proton.");
+	Help("Put a shader in the Shaders folder next to the ini and pick it here. It compiles when you select it and "
+		"runs last, over the finished frame.\n\nAccepted: .hlsl and .ps as they are. .fx, .slang, .glsl, .frag and "
+		".fsh are translated, and the result is saved in the Translated folder.\n\nOnly single pass shaders work. "
+		"A shader that needs a second pass, a lookup texture, the depth buffer or the previous frame will "
+		"translate but look wrong. The folder's README lists the bindings.\n\nCompiling needs d3dcompiler_47.dll, "
+		"which comes with Windows and with Proton.");
 
 	Muted("%s", ShaderPack::GetStatusText());
 }
@@ -242,9 +240,9 @@ bool GraphicsPanel::DrawEverythingOff()
 {
 	if (!ImGui::Button("Everything off"))
 	{
-		Help("Puts every graphics setting in the mod back to the game's own, on this tab and the others: present "
-			"size, every shader stage, the back buffer's multisampling, the stage's multisampling, the empty stage "
-			"and POTATO MODE.");
+		Help("Resets every graphics setting in the mod to the game's defaults, on this tab and the others: present "
+			"size, all shader stages, back buffer multisampling, stage multisampling, the empty stage and POTATO "
+			"MODE.");
 		return false;
 	}
 

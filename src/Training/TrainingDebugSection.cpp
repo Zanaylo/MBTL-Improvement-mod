@@ -42,8 +42,8 @@ void TrainingDebugSection::DrawState()
 	if (ImGui::Checkbox("Replay the last frame while paused", &g_settings.replayFrozenFrame))
 		Settings::SaveBool("Training", "ReplayFrozenFrame", g_settings.replayFrozenFrame);
 
-	UiText::Help("Off, the paused battle keeps drawing itself with its simulation stopped. Turn this on only if "
-		"the picture freezes wrongly while paused; it then passes no drawing flag and shows the last captured frame.");
+	UiText::Help("When off, the paused battle keeps drawing with its simulation stopped. Turn it on only if the "
+		"picture looks wrong while paused. It then shows the last captured frame.");
 }
 
 void TrainingDebugSection::DrawCamera()

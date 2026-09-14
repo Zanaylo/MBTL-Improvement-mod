@@ -238,7 +238,7 @@ void ModsPanel::DrawStageRow(int index)
 		sprintf_s(folder, "%s\\bg\\bg%03d", pack->path.c_str(), pack->stage);
 
 		const bool started = StageImport::InstallFolder(folder, pack->name.c_str());
-		sprintf_s(m_status, "%s", started ? "installing - restart the game when it finishes"
+		sprintf_s(m_status, "%s", started ? "installing. Restart the game when it finishes"
 			: StageImport::StatusText());
 	}
 
@@ -264,7 +264,7 @@ void ModsPanel::DrawFooter()
 void ModsPanel::DrawHelp()
 {
 	ImGui::TextWrapped("A mod is a folder with the game's own paths inside it. One that replaces a stage's "
-		"textures holds bg\\bg001 and nothing else. Install a zip, or drop the folder in yourself - either way it "
+		"textures holds bg\\bg001 and nothing else. Install a zip or drop the folder in yourself. Either way it "
 		"is in the list within a second, with no restart.");
 
 	ImGui::SeparatorText("What a switch does");
@@ -277,7 +277,7 @@ void ModsPanel::DrawHelp()
 		"happens, naming the mod that beat it.");
 
 	ImGui::TextWrapped("The whole reading order, first to last:");
-	ImGui::BulletText("Your own files - the top row, MBTL-IM\\Mods");
+	ImGui::BulletText("Your own files: the top row, MBTL-IM\\Mods");
 	ImGui::BulletText("this list, top to bottom");
 	ImGui::BulletText("the game's own archives, which answer whatever is left");
 

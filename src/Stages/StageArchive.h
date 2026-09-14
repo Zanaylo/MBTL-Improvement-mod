@@ -25,6 +25,12 @@ namespace StageArchive
 		virtual bool BgList(std::string& out) = 0;
 	};
 
+	struct Pair
+	{
+		std::string key;
+		std::string value;
+	};
+
 	std::unique_ptr<Source> Open(const char* folder);
 
 	bool MagicOk(const std::string& file, const std::vector<uint8_t>& data);
@@ -37,6 +43,7 @@ namespace StageArchive
 
 	bool Block(const std::string& bgList, const std::string& stage, std::string& out);
 	bool Field(const std::string& block, const char* key, std::string& out);
+	void Pairs(const std::string& block, std::vector<Pair>& out);
 
 	std::string Unquoted(const std::string& value);
 }

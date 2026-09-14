@@ -185,13 +185,13 @@ void RewriteDisplay(IDirect3D9* d3d9, UINT adapter, D3DPRESENT_PARAMETERS& param
 {
 	if (!g_settings.displayTuning || Compat::SafeMode())
 	{
-		Decide(Compat::SafeMode() ? "safe mode - the host owns the presentation" : "off - the game's own parameters");
+		Decide(Compat::SafeMode() ? "safe mode: the host owns the presentation" : "off: the game's own parameters");
 		return;
 	}
 
 	if (parameters.Windowed)
 	{
-		Decide("windowed - back buffer %ux%u, the compositor owns the rest", parameters.BackBufferWidth,
+		Decide("windowed: back buffer %ux%u, the compositor owns the rest", parameters.BackBufferWidth,
 			parameters.BackBufferHeight);
 		return;
 	}

@@ -227,7 +227,7 @@ void PaletteWindow::DrawPlayer(int player)
 
 	if (chara < 0)
 	{
-		ImGui::TextDisabled("nobody in this slot yet - the editor works during a match");
+		ImGui::TextDisabled("nobody in this slot yet. The editor works during a match");
 		return;
 	}
 
@@ -445,7 +445,7 @@ void PaletteWindow::DrawFlatSwatches(int player)
 
 	if (count == 0)
 	{
-		ImGui::TextDisabled("every entry looks like padding - untick Filter junk colours");
+		ImGui::TextDisabled("every entry looks like padding. Untick Filter junk colours");
 		return;
 	}
 
@@ -604,7 +604,7 @@ void PaletteWindow::DrawGrid(int player, const unsigned char* entries, int count
 		}
 
 		if (ImGui::IsItemHovered())
-			ImGui::SetTooltip("entry %d%s", i, changed ? " - changed" : "");
+			ImGui::SetTooltip("entry %d%s", i, changed ? ", changed" : "");
 
 		NextSwatch(n, count);
 		ImGui::PopID();
@@ -643,7 +643,7 @@ void PaletteWindow::DrawPicker(int player)
 	else if (PalettePaint::IsPainting(player))
 		ImGui::TextDisabled("worn");
 	else
-		ImGui::TextDisabled("applied - waiting for this character to draw");
+		ImGui::TextDisabled("applied, waiting for this character to draw");
 }
 
 void PaletteWindow::DrawPickerButtons(int player)
@@ -763,7 +763,7 @@ void PaletteWindow::DrawEffectGrid(int player, const unsigned char* entries, int
 			const int parts = PartColourTable::GetPartCount(side.chara, entry);
 			const int effects = EffectTable::CountUsing(side.chara, entry);
 
-			ImGui::SetTooltip("entry %d - tints %d part%s in %d effect%s%s", entry, parts, parts == 1 ? "" : "s", effects,
+			ImGui::SetTooltip("entry %d tints %d part%s in %d effect%s%s", entry, parts, parts == 1 ? "" : "s", effects,
 				effects == 1 ? "" : "s", edited ? ", changed" : "");
 		}
 
@@ -963,7 +963,7 @@ void PaletteWindow::DrawPngButtons(int player)
 
 	if (ImGui::IsItemHovered())
 		ImGui::SetTooltip("Applies an indexed PNG's own colour table straight to this palette. The PNG's entries have to "
-			"already line up with the game's - this does not re-quantize or reorder colours.");
+			"already line up with the game's. This does not requantize or reorder colours.");
 
 	ImGui::SameLine();
 

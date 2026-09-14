@@ -42,11 +42,11 @@ constexpr const char* kPlaybackNames[] = { "nothing", "play", "stop", "give the 
 constexpr const char* kNotInstalled = "not installed";
 constexpr const char* kNoPlay = "PlayBgm was not found on this game version";
 constexpr const char* kHookFailed = "PlayBgm could not be hooked";
-constexpr const char* kWaiting = "hooked - Play and Stop from this window wait until the game has played music once";
-constexpr const char* kOnPresent = "hooked - Play and Stop from this window act on the next frame";
-constexpr const char* kOnSceneChange = "hooked - the game plays music on another thread, so Play and Stop from this "
-	"window wait for the next scene change";
-constexpr const char* kNoCommands = "hooked - StopBgm or StartBgm was not found, so Play and Stop from this window "
+constexpr const char* kWaiting = "hooked. Play and Stop wait until the game has played music once";
+constexpr const char* kOnPresent = "hooked. Play and Stop act on the next frame";
+constexpr const char* kOnSceneChange = "hooked. The game plays music on another thread, so Play and Stop "
+	"wait for the next scene change";
+constexpr const char* kNoCommands = "hooked. StopBgm or StartBgm was not found, so Play and Stop "
 	"wait for the next scene change";
 
 PlayBgm_t oPlayBgm = nullptr;
@@ -231,7 +231,7 @@ void StopNow()
 {
 	InterlockedExchange(&g_held, kNoTrack);
 	g_stop();
-	Explain("stopped by you - the next screen brings music back");
+	Explain("stopped by you. The next screen brings music back");
 }
 
 void GiveBack()
@@ -242,7 +242,7 @@ void GiveBack()
 
 	if (!BgmTable::IsValidId(asked))
 	{
-		Explain("given back - the next screen picks the music");
+		Explain("given back. The next screen picks the music");
 		return;
 	}
 

@@ -94,7 +94,7 @@ const char* GameState::StatusText()
 		return "Not while you are online.";
 
 	if (!IsBattleRunning())
-		return "In a match only - training, versus, arcade or a replay.";
+		return "Only in a match: training, versus, arcade or a replay.";
 
 	return IsTraining() ? "In training." : "In a match.";
 }

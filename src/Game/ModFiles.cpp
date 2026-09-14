@@ -373,6 +373,11 @@ void ModFiles::AddOverlay(IFileOverlay* overlay)
 	g_overlays.push_back(overlay);
 }
 
+bool ModFiles::Find(const char* gamePath, std::string& out)
+{
+	return gamePath != nullptr && FindOnDisk(Normalise(gamePath), out);
+}
+
 void ModFiles::Rescan()
 {
 	g_stirred = false;

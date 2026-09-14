@@ -30,7 +30,7 @@ constexpr DWORD kRefreshIntervalMs = 250;
 constexpr double kFrameMs = 1000.0 / 60.0;
 constexpr const char* kVideo = "Video";
 constexpr const char* kGraphics = "Graphics";
-constexpr const char* kAutomatic = "Automatic - leave the desktop's own mode";
+constexpr const char* kAutomatic = "Automatic (keep the desktop's own mode)";
 
 const ImVec4 kGoodColour(0.45f, 0.80f, 0.50f, 1.0f);
 const ImVec4 kWarnColour(0.95f, 0.55f, 0.45f, 1.0f);
@@ -52,29 +52,28 @@ const Option kOptions[] = {
 		&g_settings.timerResolution,
 		"TimerResolution",
 		"Keep the Windows timer at 1 ms",
-		"Fixes what alt-tab leaves behind. No downside.",
-		"Since Windows 10 2004 a 1 ms timer request belongs to the process that made it, and Windows "
-		"takes it back while that process sits in the background. After an alt-tab every sleep can "
-		"last 15.6 ms instead of 1. This holds the request and asks again when the window comes back.",
+		"Fixes the slowdown Alt+Tab leaves behind. No downside.",
+		"Since Windows 10 version 2004, a 1 ms timer request only counts while its program is in the foreground. "
+		"After Alt+Tab every sleep can last 15.6 ms instead of 1. This keeps the request and renews it when the "
+		"window comes back.",
 	},
 	{
 		&g_settings.powerThrottlingOptOut,
 		"PowerThrottlingOptOut",
 		"Stop Windows throttling the game in the background",
 		"The other half of the same fix. Costs a little power out of focus.",
-		"EcoQoS parks a background process on the efficient cores and clamps its timer resolution. "
-		"Opting out keeps the game on the fast cores and keeps the millisecond timer above.",
+		"Windows EcoQoS moves background programs to the slow cores and limits their timer. Opting out keeps the "
+		"game on the fast cores and keeps the 1 ms timer above.",
 	},
 	{
 		&g_settings.pumpWait,
 		"PumpWait",
 		"Keep the game's frame sleep on a precise timer",
 		"The sleep after each Present lasts one millisecond, not fifteen. No CPU cost.",
-		"MBTL runs its window, its simulation and its drawing on one thread, and after every Present that thread "
-		"sleeps for a millisecond. Once an alt-tab has clamped the Windows timer that sleep can last 15.6 ms, "
-		"which is a dropped frame.\n\n"
-		"This puts every one and two millisecond sleep in the game on a high resolution waitable timer, which "
-		"Windows does not clamp. It costs no CPU, patches no game code and switches off cleanly.",
+		"MBTL runs its window, simulation and drawing on one thread, which sleeps for 1 ms after every Present. "
+		"After Alt+Tab, Windows can stretch that sleep to 15.6 ms, which drops a frame.\n\nThis moves every 1 and "
+		"2 ms sleep in the game to a precise timer that Windows does not stretch. No CPU cost, no game code "
+		"patched, and it turns off cleanly.",
 	},
 };
 
@@ -568,17 +567,16 @@ bool PerformanceWindow::DrawDisplayGroup()
 		changed = true;
 	}
 
-	Help("Off leaves the refresh rate and the back buffer count exactly as the game asked Direct3D for them.");
+	Help("When off, the refresh rate and back buffer count stay exactly as the game asked Direct3D for them.");
 
 	ImGui::BeginDisabled(!g_settings.displayTuning);
 
 	changed = DrawRefreshCombo() || changed;
 
-	Help("With the game's vsync off Present never waits, so the refresh rate only decides how long a frame takes "
-		"to reach the glass, and leaving the desktop's own mode alone is both the fastest and the cheapest to "
-		"alt-tab out of.\n\n"
-		"With vsync on and a rate that does not divide by 60, frames land alternately early and late. Automatic "
-		"then picks the highest listed rate that does divide by 60.\n\nRestart the game to apply.");
+	Help("With the game's vsync off, the refresh rate only changes how fast a frame reaches the screen. Keeping "
+		"the desktop's own mode is the fastest option and the quickest to Alt+Tab out of.\n\nWith vsync on and a "
+		"rate that does not divide by 60, frames land unevenly. Automatic picks the highest listed rate that "
+		"divides by 60.\n\nRestart the game to apply.");
 
 	ImGui::BeginDisabled(!vsync);
 
@@ -588,10 +586,8 @@ bool PerformanceWindow::DrawDisplayGroup()
 		changed = true;
 	}
 
-	Help("A second buffer gives a frame that misses the vblank somewhere to wait instead of costing a whole "
-		"refresh, and costs up to a frame of input latency to get.\n\n"
-		"It only does anything with vsync on. With vsync off there is no vblank to miss, so the buffer becomes a "
-		"queued frame of delay and nothing else.");
+	Help("A second buffer lets a late frame wait instead of costing a whole refresh. It adds up to one frame of "
+		"input lag.\n\nIt only matters with vsync on. With vsync off it just adds one queued frame of delay.");
 
 	ImGui::EndDisabled();
 
@@ -628,9 +624,9 @@ bool PerformanceWindow::DrawAdvanced()
 	if (changed)
 		SaveVideo("PumpWaitAllInput", g_settings.pumpWaitAllInput);
 
-	Help("The game reads input at the start of its next frame. Ending the sleep the moment a keyboard or mouse "
-		"message arrives lets that read come up to a millisecond sooner, and the game's own limiter still holds 60 "
-		"frames a second. Costs CPU in proportion to how much the mouse moves. Needs the option above switched on.");
+	Help("The game reads input at the start of each frame. Waking up as soon as a keyboard or mouse message "
+		"arrives lets that read happen up to a millisecond sooner. The game still runs at 60 frames a second. Uses "
+		"more CPU the more you move the mouse. Needs the option above turned on.");
 
 	return changed;
 }
@@ -726,7 +722,7 @@ void PerformanceWindow::DrawPotatoTab()
 
 	ImGui::Spacing();
 
-	Muted("The drawing size takes effect the next time the game builds its display - restart it, or touch any video "
+	Muted("The drawing size takes effect the next time the game builds its display. Restart it, or change any video "
 		"option in its own menu. Everything else is immediate. In exclusive fullscreen the back buffer has to name "
 		"a mode your monitor really has, so the size is rounded up to the smallest listed one that fits.");
 
@@ -800,8 +796,8 @@ void PerformanceWindow::DrawImprovementsTab()
 		changed = true;
 	}
 
-	Help("Everything drawn straight into the back buffer - the HUD, the menus and this overlay - is supersampled. "
-		"Windowed only, takes effect after a restart, and it costs fill rate: 4K is nine times 720p.");
+	Help("Supersamples everything drawn straight to the back buffer: the HUD, the menus and this overlay. Windowed "
+		"mode only. Takes effect after a restart. It costs GPU time: 4K is nine times the pixels of 720p.");
 
 	UiText::Muted("%s", Improvements::Describe(Improvements::GetLevel()));
 	DrawSceneTargetNote();
@@ -869,14 +865,14 @@ void PerformanceWindow::DrawPotatoState()
 		}
 		else if (rounded)
 		{
-			ImGui::TextColored(kGoodColour, "Drawing at %ux%u - the smallest mode your monitor lists at or above the "
+			ImGui::TextColored(kGoodColour, "Drawing at %ux%u, the smallest mode your monitor lists at or above the "
 				"%dx%d asked for", present.BackBufferWidth, present.BackBufferHeight, g_settings.presentWidth,
 				g_settings.presentHeight);
 		}
 		else
 		{
-			Warn("Asked to draw at %dx%d, still drawing at %ux%u. The display is built once - restart the game, or "
-				"touch any video option in its own menu.", g_settings.presentWidth, g_settings.presentHeight,
+			Warn("Asked to draw at %dx%d, still drawing at %ux%u. The display is built once. Restart the game, or "
+				"change any video option in its own menu.", g_settings.presentWidth, g_settings.presentHeight,
 				present.BackBufferWidth, present.BackBufferHeight);
 		}
 	}
@@ -911,8 +907,8 @@ void PerformanceWindow::DrawMetricsTab()
 		Settings::SaveBool("Debug", "Profiler", measuring);
 	}
 
-	Help("Times the gap between finished frames, how long Present blocks, and every step of the mod's own work. Off "
-		"by default so a session nobody is measuring pays nothing for it.");
+	Help("Measures the time between frames, how long Present blocks, and each step of the mod's own work. Off by "
+		"default, so it costs nothing when you are not measuring.");
 
 	if (!measuring)
 	{
@@ -1002,8 +998,8 @@ void PerformanceWindow::DrawInputLag(double presentBlockMs)
 	}
 
 	Muted("Measured from a physical press to the character's own input field changing, so it is the half of the "
-		"delay the simulation can see. It cannot see the swap chain or the scan-out - Direct3D 9 without the Ex "
-		"interfaces reports neither - so the display half below is arithmetic, not a measurement.");
+		"delay the simulation can see. It cannot see the swap chain or the scan out, because Direct3D 9 without the Ex "
+		"interfaces reports neither. The display half below is estimated, not measured.");
 
 	const D3DPRESENT_PARAMETERS& present = DeviceHooks::GetPresentParameters();
 	const double refreshMs = present.FullScreen_RefreshRateInHz != 0 ? 1000.0 / present.FullScreen_RefreshRateInHz

@@ -9,7 +9,6 @@ namespace StageLibrary
 	constexpr int kTrainingStage = 90;
 	constexpr int kDebugStage = 99;
 	constexpr int kTemplateCard = -1;
-	constexpr int kLastCard = 41;
 	constexpr int kDefaultMusic = 1;
 	constexpr const char* kSection = "StageLibrary";
 
@@ -44,7 +43,6 @@ namespace StageLibrary
 	bool Show(int number, bool shown);
 	bool SetCard(int number, int card);
 	bool SetMusic(int number, int music);
-	bool MarkRemoved(int number);
 
 	void DeleteFiles(int number);
 

@@ -9,10 +9,12 @@
 #include "Stages/CharacterLight.h"
 #include "Stages/HiddenStages.h"
 #include "Stages/StageBloom.h"
+#include "Stages/StageCards.h"
 #include "Stages/StageImport.h"
 #include "Stages/StagePicker.h"
 #include "Stages/StageRevision.h"
 #include "Stages/StageTable.h"
+#include "Stages/StageThumbs.h"
 
 #include <imgui.h>
 
@@ -59,6 +61,7 @@ constexpr float kActionColumn = 70.0f;
 constexpr float kCheckboxGap = 24.0f;
 constexpr float kProgressWidth = 260.0f;
 constexpr float kPercent = 100.0f;
+constexpr float kReplaceWidth = 260.0f;
 constexpr int kHiddenPerLine = 3;
 constexpr int kFirstSheetLast = 20;
 
@@ -74,6 +77,11 @@ void CardLabel(int card, int templateCard, char* out, size_t size)
 	}
 
 	sprintf_s(out, size, "%d, sheet %d", card, card <= kFirstSheetLast ? 1 : 2);
+}
+
+void OwnLabel(const GameStages::Own& own, char* out, size_t size)
+{
+	sprintf_s(out, size, "%03d  %s", own.number, own.name.c_str());
 }
 
 void TrackLabel(int id, const std::vector<GameStages::Track>& tracks, char* out, size_t size)
@@ -134,9 +142,19 @@ void StagesPanel::Refresh()
 	m_learned = learned;
 
 	StageLibrary::Snapshot(m_entries);
+	GameStages::Snapshot(m_own);
 	GameStages::HiddenSnapshot(m_hidden);
 	GameStages::TrackSnapshot(m_tracks);
 	HiddenStages::Snapshot(m_unlocked);
+	StageReplacements::Snapshot(m_replaced);
+	StageThumbs::Assign(m_thumbs);
+	m_lastCard = StageThumbs::LastCard();
+
+	m_own.erase(std::remove_if(m_own.begin(), m_own.end(),
+		[](const GameStages::Own& own) { return own.number == StageLibrary::kRandomStage; }), m_own.end());
+
+	if (m_replaceNumber == 0 && !m_own.empty())
+		m_replaceNumber = m_own.front().number;
 
 	std::vector<int> free;
 	StageLibrary::FreeNumbers(free);
@@ -162,6 +180,11 @@ void StagesPanel::TakeDialogs()
 
 	if (m_folderDialog.TakeResult(picked) && !picked.empty())
 		StageImport::InstallFolder(picked.c_str(), nullptr);
+
+	picked.clear();
+
+	if (m_replaceDialog.TakeResult(picked) && !picked.empty())
+		StageImport::ReplaceFolder(picked.c_str(), m_replaceNumber);
 }
 
 void StagesPanel::BuildRows()
@@ -216,7 +239,35 @@ void StagesPanel::DrawInstalled()
 	DrawStageTable();
 	DrawLighting();
 	DrawHidden();
+	DrawReplaced();
 	DrawLibrary();
+}
+
+void StagesPanel::DrawReplaced()
+{
+	if (m_replaced.empty())
+		return;
+
+	ImGui::SeparatorText("Replaced game stages");
+
+	for (const StageReplacements::Replacement& replacement : m_replaced)
+	{
+		ImGui::PushID(replacement.number);
+		ImGui::BeginDisabled(StageImport::IsBusy());
+
+		if (ImGui::SmallButton("Restore"))
+			StageImport::Restore(replacement.number);
+
+		ImGui::EndDisabled();
+
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("Deletes every file in %s, so the game's own stage comes back.",
+				StageLibrary::FolderOf(replacement.number).c_str());
+
+		ImGui::SameLine();
+		ImGui::Text("%03d  %s", replacement.number, replacement.name.c_str());
+		ImGui::PopID();
+	}
 }
 
 void StagesPanel::DrawLighting()
@@ -246,8 +297,8 @@ void StagesPanel::DrawStageTable()
 	ImGui::SeparatorText("Stage table");
 	UiText::Muted("%s", StageTable::StatusText());
 
-	UiText::Help("MBTL keeps room for stage numbers 0 to 99, and most of those below 36 are its own. The mod moves "
-		"the stage table somewhere larger as the game starts, so the extra numbers work too.");
+	UiText::Help("MBTL has room for stage numbers 0 to 99, and most numbers below 36 are its own stages. The mod "
+		"moves the stage table to a bigger one at startup, so higher numbers work too.");
 
 	UiText::Muted("Stage picker: %d of %d entries used. %d free stage number(s).", m_pickerUsed, m_pickerCapacity,
 		m_freeNumbers);
@@ -316,7 +367,7 @@ void StagesPanel::DrawLibrary()
 
 void StagesPanel::DrawEntry(const Entry& entry)
 {
-	const bool locked = entry.removed || StageImport::IsBusy();
+	const bool locked = StageImport::IsBusy();
 
 	ImGui::PushID(entry.number);
 	ImGui::TableNextRow();
@@ -325,18 +376,12 @@ void StagesPanel::DrawEntry(const Entry& entry)
 	ImGui::Text("%d", entry.number);
 
 	ImGui::TableNextColumn();
-
-	if (entry.removed)
-		ImGui::TextDisabled("%s", entry.name.c_str());
-	else
-		ImGui::TextUnformatted(entry.name.c_str());
+	ImGui::TextUnformatted(entry.name.c_str());
 
 	if (ImGui::IsItemHovered())
 		ImGui::SetTooltip("%s", StageLibrary::FolderOf(entry.number).c_str());
 
-	if (entry.removed)
-		UiText::Muted("removed, deleted when the game starts");
-	else if (entry.number >= StageTable::Numbers())
+	if (entry.number >= StageTable::Numbers())
 		UiText::Warn("needs the extension table");
 
 	ImGui::TableNextColumn();
@@ -370,17 +415,30 @@ void StagesPanel::DrawEntry(const Entry& entry)
 
 void StagesPanel::DrawCard(const Entry& entry)
 {
-	char preview[32] = {};
+	const int thumb = StageThumbs::CardIn(m_thumbs, entry.number);
+
+	if (thumb >= 0)
+	{
+		ImGui::Text("thumbnail (%d)", thumb);
+
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("The thumbnail.png or thumbnail.dds in this stage's folder is its card. Delete it to pick "
+				"a card here.");
+
+		return;
+	}
+
+	char preview[40] = {};
 	CardLabel(entry.card, m_templateCard, preview, sizeof(preview));
 
 	ImGui::SetNextItemWidth(-1.0f);
-	ImGui::BeginDisabled(entry.removed);
+	ImGui::BeginDisabled(StageImport::IsBusy());
 
 	if (ImGui::BeginCombo("##card", preview))
 	{
-		for (int card = StageLibrary::kTemplateCard; card <= StageLibrary::kLastCard; ++card)
+		for (int card = StageLibrary::kTemplateCard; card <= m_lastCard; ++card)
 		{
-			char label[32] = {};
+			char label[40] = {};
 			CardLabel(card, m_templateCard, label, sizeof(label));
 
 			const bool selected = card == entry.card;
@@ -397,8 +455,9 @@ void StagesPanel::DrawCard(const Entry& entry)
 	ImGui::EndDisabled();
 
 	if (ImGui::IsItemHovered())
-		ImGui::SetTooltip("The picture the stage picker shows. The game has two sheets of 21 cards: 0 to 20 on the first, "
-			"21 to 41 on the second.");
+		ImGui::SetTooltip("The picture the stage picker shows: 0 to 20 on stage_thumb00, 21 and up on stage_thumb01, seven "
+			"to a row of 144x336. A taller stage_thumb01.dds in MBTL-IM\\Mods\\grpdat\\CSel adds rows, 1024x2048 reaching "
+			"card 62.\n%s", StageCards::StatusText());
 }
 
 void StagesPanel::DrawMusic(const Entry& entry)
@@ -407,7 +466,7 @@ void StagesPanel::DrawMusic(const Entry& entry)
 	TrackLabel(entry.music, m_tracks, preview, sizeof(preview));
 
 	ImGui::SetNextItemWidth(-1.0f);
-	ImGui::BeginDisabled(entry.removed);
+	ImGui::BeginDisabled(StageImport::IsBusy());
 
 	if (ImGui::BeginCombo("##music", preview))
 	{
@@ -438,6 +497,8 @@ void StagesPanel::DrawAdd()
 	DrawSource();
 	ImGui::Spacing();
 	DrawCustom();
+	ImGui::Spacing();
+	DrawReplace();
 }
 
 void StagesPanel::DrawSource()
@@ -451,9 +512,9 @@ void StagesPanel::DrawSource()
 
 	ImGui::EndDisabled();
 
-	UiText::Help("UNDER NIGHT IN-BIRTH II Sys:Celes, UNDER NIGHT IN-BIRTH Exe:Late[st] and [cl-r], UNDER NIGHT IN-BIRTH "
-		"Exe:Late and DENGEKI BUNKO FIGHTING CLIMAX IGNITION. The mod reads that game's own files, and nothing MBTL "
-		"ships is replaced.");
+	UiText::Help("Supported games: UNDER NIGHT IN-BIRTH II Sys:Celes, UNDER NIGHT IN-BIRTH Exe:Late[st] and "
+		"[cl-r], UNDER NIGHT IN-BIRTH Exe:Late and DENGEKI BUNKO FIGHTING CLIMAX IGNITION. The mod reads that "
+		"game's files and replaces nothing in MBTL.");
 
 	if (!StageImport::IsBusy())
 	{
@@ -548,8 +609,55 @@ void StagesPanel::DrawCustom()
 
 	ImGui::EndDisabled();
 
-	UiText::Help("A folder with bg.fbx.bin and its textures. A stage.txt beside them may carry a Name and a BgList "
-		"block, whose camera, fog and bloom values the stage takes.");
+	UiText::Help("Pick a folder with bg.fbx.bin and its textures.\n\nstage.txt (optional) can hold a Name and any "
+		"BgList value: camera, fog, bloom, shadows, StageSelTex and so on. Write them as a plain list or as a "
+		"whole Bg_NNN = { } block. Every value is used except StageW, which stays at the game's value so walls "
+		"match online.\n\nthumbnail.png or thumbnail.dds (optional) becomes the stage select card.");
+}
+
+void StagesPanel::DrawReplace()
+{
+	ImGui::SeparatorText("In place of one of the game's stages");
+
+	const auto chosen = std::find_if(m_own.begin(), m_own.end(),
+		[this](const GameStages::Own& own) { return own.number == m_replaceNumber; });
+
+	char preview[96] = {};
+
+	if (chosen != m_own.end())
+		OwnLabel(*chosen, preview, sizeof(preview));
+
+	Ui::SetItemWidth(kReplaceWidth);
+
+	if (ImGui::BeginCombo("##replace", preview))
+	{
+		for (const GameStages::Own& own : m_own)
+		{
+			char label[96] = {};
+			OwnLabel(own, label, sizeof(label));
+
+			const bool selected = own.number == m_replaceNumber;
+
+			if (ImGui::Selectable(label, selected))
+				m_replaceNumber = own.number;
+
+			ComboNav::KeepSelectedInView(selected);
+		}
+
+		ImGui::EndCombo();
+	}
+
+	ImGui::SameLine();
+	ImGui::BeginDisabled(StageImport::IsBusy() || m_replaceDialog.IsRunning() || chosen == m_own.end());
+
+	if (ImGui::Button("Replace it with a stage folder..."))
+		m_replaceDialog.BeginFolder("Pick the folder holding bg.fbx.bin");
+
+	ImGui::EndDisabled();
+
+	UiText::Help("The stage keeps its number, card and music, so it needs no free number. A player without it gets "
+		"the game's stage instead of crashing.\n\nFiles go to MBTL-IM\\Mods\\bg\\bgNNN and stage.txt works the "
+		"same way. A stage.txt alone in that folder changes the game's stage values and keeps its model.");
 }
 
 void StagesPanel::DrawHelp()
@@ -573,10 +681,14 @@ void StagesPanel::DrawHelp()
 
 	ImGui::SeparatorText("Restarting");
 	ImGui::TextWrapped("The game reads its stage list once, as it starts, so every change here shows after a "
-		"restart. A removed stage keeps its files until then.");
+		"restart. Remove deletes the stage's folder and takes it off the list at once; do not pick that stage before "
+		"restarting.");
 
 	ImGui::SeparatorText("Online");
-	ImGui::TextWrapped("Both players need the same stages installed under the same numbers.");
+	ImGui::TextWrapped("Both players need the same stages installed under the same numbers: the game crashes for a "
+		"player who does not have the stage picked. A stage put in place of one of the game's own has no such "
+		"problem. The player without it gets the game's stage, and the walls stay the game's so the match stays in "
+		"sync.");
 }
 
 void StagesPanel::DrawRestart()

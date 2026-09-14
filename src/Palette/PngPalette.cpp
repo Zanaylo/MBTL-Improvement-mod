@@ -171,7 +171,7 @@ bool PngPalette::Read(const std::string& path, uint8_t* outRgba, std::string& ou
 	const size_t chunk = FindPalette(file, length);
 
 	if (chunk == 0)
-		return Fail(outError, "this PNG has no palette - save it as an indexed (8-bit) image, not RGB");
+		return Fail(outError, "this PNG has no palette. Save it as an indexed 8 bit image, not RGB");
 
 	const int entries = static_cast<int>(length / 3) < kEntries ? static_cast<int>(length / 3) : kEntries;
 	const uint8_t* const colours = file.data() + chunk + kChunkHeader;

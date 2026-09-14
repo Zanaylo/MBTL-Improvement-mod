@@ -51,7 +51,7 @@ void Fail(const char* error)
 {
 	std::lock_guard<std::mutex> guard(g_lock);
 
-	sprintf_s(g_status, "the check did not answer - %.180s", error);
+	sprintf_s(g_status, "the check did not answer: %.180s", error);
 	g_newer.store(false);
 }
 

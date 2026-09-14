@@ -90,7 +90,7 @@ int NumberAfter(const std::string& text, const char* prefix)
 
 int ClampCard(int card)
 {
-	return card < StageLibrary::kTemplateCard || card > StageLibrary::kLastCard ? StageLibrary::kTemplateCard : card;
+	return card < StageLibrary::kTemplateCard ? StageLibrary::kTemplateCard : card;
 }
 
 bool Parse(const std::string& line, Entry& out)
@@ -429,18 +429,6 @@ bool StageLibrary::SetMusic(int number, int music)
 			return false;
 
 		entry.music = music;
-		return true;
-	});
-}
-
-bool StageLibrary::MarkRemoved(int number)
-{
-	return Change(number, [](Entry& entry)
-	{
-		if (entry.removed)
-			return false;
-
-		entry.removed = true;
 		return true;
 	});
 }

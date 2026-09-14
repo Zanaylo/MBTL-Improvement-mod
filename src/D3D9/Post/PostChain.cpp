@@ -301,7 +301,7 @@ void DescribeRun(const int* stages, int drawn, int asked, unsigned width, unsign
 		return;
 	}
 
-	Report("%s over %ux%u, %d of %d stages ran - the rest have no shader on this device", list,
+	Report("%s over %ux%u, %d of %d stages ran. The rest have no shader on this device", list,
 		width, height, drawn, asked);
 }
 

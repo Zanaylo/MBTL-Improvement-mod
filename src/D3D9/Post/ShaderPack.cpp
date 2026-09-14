@@ -190,7 +190,7 @@ bool CompileSelected(IDirect3DDevice9* device)
 			errors != nullptr ? static_cast<const char*>(errors->GetBufferPointer())
 			: "no message",
 			ShaderSource::IsNative(format)
-				? "" : " - the translated HLSL is in the Translated folder, and the line numbers "
+				? "" : ". The translated HLSL is in the Translated folder, and the line numbers "
 					"are its own");
 
 		LOG("[ShaderPack] %s", g_status);
@@ -215,7 +215,7 @@ bool CompileSelected(IDirect3DDevice9* device)
 	if (FAILED(created))
 	{
 		g_shader = nullptr;
-		Report("the device refused %s - it needs pixel shader 3.0", name.c_str());
+		Report("the device refused %s: it needs pixel shader 3.0", name.c_str());
 		LOG("[ShaderPack] %s", g_status);
 		return false;
 	}
@@ -225,7 +225,7 @@ bool CompileSelected(IDirect3DDevice9* device)
 	if (ShaderSource::IsNative(format))
 		Report("%s compiled and running", name.c_str());
 	else
-		Report("%s compiled and running - %s", name.c_str(), note.c_str());
+		Report("%s compiled and running: %s", name.c_str(), note.c_str());
 	LOG("[ShaderPack] %s", g_status);
 	return true;
 }
@@ -259,7 +259,7 @@ void SaveTranslated(const std::string& name, const std::string& hlsl)
 void WriteReadme()
 {
 	const char* const text =
-		"MBTL Improvement Mod - shader packs\r\n"
+		"MBTL Improvement Mod: shader packs\r\n"
 		"\r\n"
 		"A shader pack is one file in this folder that runs over the finished frame, last in the chain, after\r\n"
 		"everything else the mod draws. This file explains how to install one, where to get them, and what to\r\n"
@@ -272,7 +272,7 @@ void WriteReadme()
 		"\r\n"
 		"         <the game folder>\\MBTL-IM\\Shaders\r\n"
 		"\r\n"
-		"     Do not put it in a subfolder - only the top of this folder is looked at. The name does not\r\n"
+		"     Do not put it in a subfolder. Only the top of this folder is looked at. The name does not\r\n"
 		"     matter, only the extension.\r\n"
 		"\r\n"
 		"  2. Start the game, open the mod overlay (F1 by default) and go to Performance -> Shaders.\r\n"
@@ -282,7 +282,7 @@ void WriteReadme()
 		"\r\n"
 		"  4. It is compiled the moment you pick it. The line under the drop down tells you what happened:\r\n"
 		"\r\n"
-		"         crt-lottes.slang compiled and running - GLSL fragment stage, one pass\r\n"
+		"         crt-lottes.slang compiled and running: GLSL fragment stage, one pass\r\n"
 		"\r\n"
 		"     and the picture changes. To turn it off again, pick \"Off\" in the same drop down.\r\n"
 		"\r\n"
@@ -312,17 +312,17 @@ void WriteReadme()
 		"This game is Direct3D 9. A shader that runs here has to be HLSL compiled to pixel shader 3.0, and\r\n"
 		"there is one slot for it, over the finished frame.\r\n"
 		"\r\n"
-		"  - A .fx is HLSL, but it is not a pixel shader: it is a small program describing uniforms,\r\n"
+		"  * A .fx is HLSL, but it is not a pixel shader: it is a small program describing uniforms,\r\n"
 		"    annotations, textures, samplers, and techniques made of passes, and something has to resolve\r\n"
 		"    that before anything is compiled. The maths inside the pass is fine; everything around it\r\n"
 		"    has to be answered by something.\r\n"
-		"  - A .slang is Vulkan GLSL, and a .glsl is OpenGL GLSL. Direct3D cannot compile GLSL at all,\r\n"
+		"  * A .slang is Vulkan GLSL, and a .glsl is OpenGL GLSL. Direct3D cannot compile GLSL at all,\r\n"
 		"    and a preset usually chains several passes together.\r\n"
 		"\r\n"
 		"So neither can be handed to D3D9 as it stands. The mod rewrites it instead: uniforms become their\r\n"
 		"default values, samplers become the frame, the resolution and time uniforms become the two\r\n"
 		"constants below, and the GLSL is rewritten as HLSL. The alternative is shipping a full effect\r\n"
-		"runtime - a GLSL compiler, multi-pass rendering, its own render targets - which is not a\r\n"
+		"runtime (a GLSL compiler, multi pass rendering, its own render targets), which is not a\r\n"
 		"training mod.\r\n"
 		"\r\n"
 		"That is also the limit. ONE PASS OVER THE FINISHED FRAME IS THE WHOLE BUDGET. A shader that wants a\r\n"
@@ -344,9 +344,9 @@ void WriteReadme()
 		"\r\n"
 		"The usual causes, in order:\r\n"
 		"\r\n"
-		"  - the shader wanted a second pass or a texture, and one of them is now a constant 0\r\n"
-		"  - it used a GLSL feature with no HLSL equivalent\r\n"
-		"  - a #include the mod dropped defined something the shader needed\r\n"
+		"  * the shader wanted a second pass or a texture, and one of them is now a constant 0\r\n"
+		"  * it used a GLSL feature with no HLSL equivalent\r\n"
+		"  * a #include the mod dropped defined something the shader needed\r\n"
 		"\r\n"
 		"\r\n"
 		"WHAT THE MOD BINDS\r\n"
@@ -393,7 +393,7 @@ void WriteReadme()
 		"\r\n"
 		"The one thing that will bite you: Frame is sampled with POINT filtering, not linear. Reading\r\n"
 		"straight through at uv is then exact, which is what a pixel art game wants. But a pack that bends\r\n"
-		"the coordinates - curvature, wobble, zoom - has to filter for itself, or the picture crawls with\r\n"
+		"the coordinates (curvature, wobble, zoom) has to filter for itself, or the picture crawls with\r\n"
 		"aliasing. 12_crt.hlsl has the four tap bilinear that fixes it, in SampleFrame.\r\n"
 		"\r\n"
 		"\r\n"
@@ -433,7 +433,7 @@ void WriteReadme()
 		"IF NOTHING COMPILES AT ALL\r\n"
 		"\r\n"
 		"Compilation needs d3dcompiler_47.dll, which ships with Windows and with Proton. Without it the tab\r\n"
-		"says so, this folder is still listed and nothing is compiled - the rest of the tab is unaffected.\r\n";
+		"says so, this folder is still listed and nothing is compiled. The rest of the tab still works.\r\n";
 
 	WriteBytes(g_folder + kReadmeName, text, strlen(text));
 }

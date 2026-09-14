@@ -168,11 +168,11 @@ void FrameMeterLegendWindow::Draw()
 
 	ImGui::Spacing();
 	ImGui::SeparatorText("The numbers");
-	ImGui::BulletText("Startup - until the move can connect, first active frame included.");
-	ImGui::BulletText("Total - from the move starting to it ending.");
-	ImGui::BulletText("Advantage - who acts first, positive meaning you. The number in brackets is the advantage "
+	ImGui::BulletText("Startup: until the move can connect, first active frame included.");
+	ImGui::BulletText("Total: from the move starting to it ending.");
+	ImGui::BulletText("Advantage: who acts first, positive meaning you. The number in brackets is the advantage "
 		"before the opponent teched.");
-	ImGui::BulletText("Blockstun and hitstun - how long the opponent was held.");
-	ImGui::BulletText("Gap - free frames between two held runs.");
-	ImGui::BulletText("Flash - how long a super flash ran inside the move. The bar never gains a cell for it.");
+	ImGui::BulletText("Blockstun and hitstun: how long the opponent was held.");
+	ImGui::BulletText("Gap: free frames between two held runs.");
+	ImGui::BulletText("Flash: how long a super flash ran inside the move. The bar never gains a cell for it.");
 }

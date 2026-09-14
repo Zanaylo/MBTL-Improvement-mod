@@ -6,9 +6,11 @@
 #include "Stages/CharacterLight.h"
 #include "Stages/HiddenStages.h"
 #include "Stages/StageBloom.h"
+#include "Stages/StageCards.h"
 #include "Stages/StageImport.h"
 #include "Stages/StageLibrary.h"
 #include "Stages/StageOverlays.h"
+#include "Stages/StageThumbs.h"
 #include "Stages/StagesDebugSection.h"
 
 namespace {
@@ -27,8 +29,10 @@ StagesDebugSection g_debug;
 void StagesModule::Install()
 {
 	HiddenStages::Load();
+	StageCards::Install();
 	StageLibrary::Load();
 	StageOverlays::Register();
+	StageThumbs::Register();
 	StageBloom::Install();
 	CharacterLight::Install();
 

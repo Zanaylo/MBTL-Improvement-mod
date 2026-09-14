@@ -3,6 +3,7 @@
 #include "Core/logger.h"
 #include "Game/Anchors.h"
 #include "Game/GameOffsets.h"
+#include "Hooks/CodePatch.h"
 #include "Hooks/ImageScanner.h"
 
 #include <windows.h>
@@ -139,7 +140,7 @@ uint8_t* AsPointer(uintptr_t address)
 
 bool Refuse(const char* reason)
 {
-	sprintf_s(g_status, "left at the game's own 100 - %s", reason);
+	sprintf_s(g_status, "left at the game's own 100: %s", reason);
 	LOG("StageTable: %s", g_status);
 	return false;
 }
@@ -401,19 +402,6 @@ uint8_t* Allocate(size_t bytes, DWORD protection)
 	return static_cast<uint8_t*>(VirtualAlloc(nullptr, bytes, MEM_COMMIT | MEM_RESERVE, protection));
 }
 
-bool Poke(uint8_t* at, const void* bytes, size_t size)
-{
-	DWORD previous = 0;
-
-	if (!VirtualProtect(at, size, PAGE_EXECUTE_READWRITE, &previous))
-		return false;
-
-	std::memcpy(at, bytes, size);
-	VirtualProtect(at, size, previous, &previous);
-	FlushInstructionCache(GetCurrentProcess(), at, size);
-	return true;
-}
-
 bool JumpInto(uint8_t* site, size_t length, const uint8_t* cave)
 {
 	uint8_t bytes[kLongestPatch] = {};
@@ -427,7 +415,7 @@ bool JumpInto(uint8_t* site, size_t length, const uint8_t* cave)
 	bytes[0] = kJump;
 	std::memcpy(bytes + 1, &relative, sizeof(relative));
 
-	return Poke(site, bytes, length);
+	return CodePatch::Write(site, bytes, length);
 }
 
 int Repoint(const std::vector<uint8_t*>& sites, const uint8_t* destination)
@@ -436,7 +424,7 @@ int Repoint(const std::vector<uint8_t*>& sites, const uint8_t* destination)
 	int done = 0;
 
 	for (uint8_t* site : sites)
-		done += Poke(site, &value, sizeof(value)) ? 1 : 0;
+		done += CodePatch::Write(site, &value, sizeof(value)) ? 1 : 0;
 
 	return done;
 }
@@ -451,7 +439,7 @@ int Restack(const std::vector<Cell>& cells, const uint8_t* buffer, int32_t base)
 		const uint32_t value = static_cast<uint32_t>(reinterpret_cast<uintptr_t>(buffer) + offset);
 		const uint8_t modrm = static_cast<uint8_t>(cell.modrm[0] & kModClear);
 
-		done += Poke(cell.modrm, &modrm, sizeof(modrm)) && Poke(cell.disp, &value, sizeof(value)) ? 1 : 0;
+		done += CodePatch::Write(cell.modrm, &modrm, sizeof(modrm)) && CodePatch::Write(cell.disp, &value, sizeof(value)) ? 1 : 0;
 	}
 
 	return done;
@@ -509,7 +497,7 @@ int LiftBounds(const Plan& plan, CaveWriter& writer)
 	const uint32_t limit = StageTable::kWideNumbers;
 
 	for (uint8_t* site : plan.limits)
-		done += Poke(site, &limit, sizeof(limit)) ? 1 : 0;
+		done += CodePatch::Write(site, &limit, sizeof(limit)) ? 1 : 0;
 
 	return done + (ClampFilter(plan.filterRead, writer) ? 1 : 0);
 }
@@ -558,7 +546,7 @@ bool Apply(const Plan& plan)
 
 	if (static_cast<size_t>(done) != expected)
 	{
-		sprintf_s(g_status, "only %d of %u patch(es) took - the stage table is in a mixed state", done,
+		sprintf_s(g_status, "only %d of %u patch(es) took, so the stage table is in a mixed state", done,
 			static_cast<unsigned>(expected));
 		LOG("StageTable: %s", g_status);
 		return false;

@@ -484,6 +484,41 @@ namespace GameOffsets
 		inline constexpr uint32_t kFilterEntries = 0x80;
 	}
 
+	namespace Cards
+	{
+		inline constexpr const char* kFirstSheetAnchor = "grpdat/CSel/stage_thumb00";
+		inline constexpr const char* kSecondSheetAnchor = "grpdat/CSel/stage_thumb01";
+		inline constexpr const char* kSecondSheetFile = "grpdat/CSel/stage_thumb01.dds";
+		inline constexpr size_t kStoreWindow = 0x20;
+		inline constexpr uint8_t kStoreSheet[] = { 0x89, 0x84 };
+		inline constexpr size_t kStoreDispAt = 3;
+
+		inline constexpr uint8_t kDivide[] = { 0x99, 0xB9, 0x15, 0x00, 0x00, 0x00, 0xF7, 0xF9 };
+		inline constexpr uint8_t kLoadFramed[] = { 0x8B, 0x45 };
+		inline constexpr uint8_t kStoreQuotient[] = { 0x89, 0x85 };
+		inline constexpr uint8_t kStoreRemainder[] = { 0x89, 0x55 };
+		inline constexpr uint8_t kCompareQuotient[] = { 0x83, 0xBD };
+		inline constexpr uint8_t kClampJump[] = { 0x01, 0x7E, 0x0A };
+		inline constexpr uint8_t kClearQuotient[] = { 0xC7, 0x85 };
+		inline constexpr uint8_t kLoadQuotient[] = { 0x8B, 0x95 };
+		inline constexpr uint8_t kFetchSheet[] = { 0x8B, 0x8C, 0x90 };
+		inline constexpr size_t kSplitLength = 50;
+		inline constexpr size_t kMatchLength = 66;
+
+		inline constexpr int kPerSheet = 21;
+		inline constexpr int kPerRow = 7;
+		inline constexpr int kStockRows = 3;
+		inline constexpr uint32_t kCellHeight = 336;
+		inline constexpr uint32_t kCellWidth = 144;
+		inline constexpr int kStockFirstFree = 31;
+		inline constexpr int kArtX = 20;
+		inline constexpr int kArtY = 3;
+		inline constexpr int kArtWidth = 104;
+		inline constexpr int kArtHeight = 330;
+		inline constexpr size_t kDdsHeightAt = 12;
+		inline constexpr size_t kDdsHeaderBytes = 16;
+	}
+
 	namespace Music
 	{
 		inline constexpr const char* kLoaderAnchor = "BGM_%03d";

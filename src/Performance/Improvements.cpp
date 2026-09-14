@@ -23,7 +23,7 @@ constexpr Step kSteps[Improvements::Level_COUNT] = {
 	},
 	{
 		"1080p",
-		"1920x1080. On a 1080p screen that is one back buffer pixel per screen pixel - nothing "
+		"1920x1080. On a 1080p screen that is one back buffer pixel per screen pixel: nothing "
 		"supersampled, nothing thrown away, and the overlay stays exactly sharp.",
 		1920, 1080,
 	},

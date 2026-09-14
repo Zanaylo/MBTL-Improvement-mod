@@ -14,8 +14,10 @@
 #include "Stages/StageLibrary.h"
 #include "Stages/StageNames.h"
 #include "Stages/StagePicker.h"
+#include "Stages/StageReplacements.h"
 #include "Stages/StageRevision.h"
 #include "Stages/StageTable.h"
+#include "Stages/StageThumbs.h"
 
 #include <algorithm>
 #include <atomic>
@@ -190,28 +192,6 @@ void List(std::vector<int>& order, int number)
 	order.push_back(number);
 }
 
-void Unhide(const std::string& list, const std::vector<Span>& spans, std::vector<int>& order, std::vector<Edit>& edits)
-{
-	for (const Span& span : spans)
-	{
-		if (span.number == StageLibrary::kRandomStage || !HiddenStages::Unlocked(span.number))
-			continue;
-
-		std::string block = BlockOf(list, span);
-		size_t keyAt = 0;
-		size_t valueAt = 0;
-		size_t valueEnd = 0;
-
-		if (StageArchive::FieldSpan(block, "SelectDisable", keyAt, valueAt, valueEnd) && atoi(block.c_str() + valueAt) != 0)
-		{
-			block.replace(valueAt, valueEnd - valueAt, "0");
-			edits.push_back({ span.start, span.end - span.start, block });
-		}
-
-		List(order, span.number);
-	}
-}
-
 std::string ReadNote(int number)
 {
 	std::vector<uint8_t> blob;
@@ -220,7 +200,56 @@ std::string ReadNote(int number)
 	return Text(blob);
 }
 
-std::string AddInstalled(const std::string& list, const Span& templateSpan, std::vector<int>& order)
+std::string Reworked(const std::string& list, const Span& span, const std::vector<StageThumbs::Card>& thumbs)
+{
+	std::string block = BlockOf(list, span);
+	size_t keyAt = 0;
+	size_t valueAt = 0;
+	size_t valueEnd = 0;
+
+	if (HiddenStages::Unlocked(span.number) && StageArchive::FieldSpan(block, "SelectDisable", keyAt, valueAt, valueEnd) &&
+		atoi(block.c_str() + valueAt) != 0)
+	{
+		block.replace(valueAt, valueEnd - valueAt, "0");
+	}
+
+	const std::string note = ReadNote(span.number);
+	std::string reworked = note.empty() ? block : StageEntry::Rework(block, note);
+	const int card = StageThumbs::CardIn(thumbs, span.number);
+
+	if (card >= 0)
+		BgListText::SetValue(reworked, "StageSelTex", std::to_string(card));
+
+	return reworked;
+}
+
+void ReworkOwn(const std::string& list, const std::vector<Span>& spans, const std::vector<StageThumbs::Card>& thumbs,
+	std::vector<int>& order, std::vector<Edit>& edits)
+{
+	for (const Span& span : spans)
+	{
+		if (span.number == StageLibrary::kRandomStage)
+			continue;
+
+		const std::string block = Reworked(list, span, thumbs);
+
+		if (list.compare(span.start, span.end - span.start, block) != 0)
+			edits.push_back({ span.start, span.end - span.start, block });
+
+		if (HiddenStages::Unlocked(span.number))
+			List(order, span.number);
+	}
+}
+
+int CardOf(const Entry& entry, const std::vector<StageThumbs::Card>& thumbs)
+{
+	const int thumb = StageThumbs::CardIn(thumbs, entry.number);
+
+	return thumb >= 0 ? thumb : entry.card;
+}
+
+std::string AddInstalled(const std::string& list, const Span& templateSpan, const std::vector<StageThumbs::Card>& thumbs,
+	std::vector<int>& order)
 {
 	const std::string templateBlock = BlockOf(list, templateSpan);
 	const std::string newline = BgListText::Newline(list);
@@ -233,7 +262,7 @@ std::string AddInstalled(const std::string& list, const Span& templateSpan, std:
 	for (const Entry& entry : entries)
 	{
 		added += newline + "\t" + StageEntry::Compose(templateBlock, ReadNote(entry.number), entry.number,
-			StageEntry::ShiftJis(entry.name), entry.card) + newline;
+			StageEntry::ShiftJis(entry.name), CardOf(entry, thumbs)) + newline;
 
 		if (entry.shown)
 			List(order, entry.number);
@@ -397,10 +426,12 @@ public:
 
 		std::vector<int> order = listed;
 		std::vector<Edit> edits;
+		std::vector<StageThumbs::Card> thumbs;
+		StageThumbs::Assign(thumbs);
 
-		Unhide(list, spans, order, edits);
+		ReworkOwn(list, spans, thumbs, order, edits);
 
-		const std::string added = AddInstalled(list, templateSpan, order);
+		const std::string added = AddInstalled(list, templateSpan, thumbs, order);
 
 		if (!added.empty())
 			edits.push_back({ spans.back().end, 0, added });
@@ -436,7 +467,10 @@ public:
 		std::vector<Entry> entries;
 		SnapshotPlaced(entries);
 
-		if (entries.empty())
+		std::vector<StageReplacements::Replacement> replaced;
+		StageReplacements::Snapshot(replaced);
+
+		if (entries.empty() && replaced.empty())
 			return false;
 
 		std::string names = Text(content);
@@ -444,6 +478,12 @@ public:
 
 		for (const Entry& entry : entries)
 			SetName(names, entry.number, StageEntry::ShiftJis(entry.name), newline);
+
+		for (const StageReplacements::Replacement& replacement : replaced)
+		{
+			if (replacement.renamed)
+				SetName(names, replacement.number, StageEntry::ShiftJis(replacement.name), newline);
+		}
 
 		Store(names, content);
 		++g_namesApplied;

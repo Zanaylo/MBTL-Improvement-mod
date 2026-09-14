@@ -45,7 +45,7 @@ void UpdateNotifierWindow::DrawProgress(const UpdateInstall::Snapshot& snapshot)
 	}
 
 	if (job.source[0] != '\0')
-		UiText::Muted("%s - from %s", job.step, job.source);
+		UiText::Muted("%s (from %s)", job.step, job.source);
 	else if (job.step[0] != '\0')
 		UiText::Muted("%s", job.step);
 

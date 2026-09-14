@@ -20,7 +20,9 @@ namespace StageImport
 
 	bool InstallMany(const int* indices, const char* const* names, int count);
 	bool InstallFolder(const char* folder, const char* name);
+	bool ReplaceFolder(const char* folder, int number);
 	bool Remove(int number);
+	bool Restore(int number);
 
 	bool SetInGame(int number, bool inGame);
 	bool Unlock(int number, bool unlocked);

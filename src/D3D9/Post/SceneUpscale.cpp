@@ -58,7 +58,7 @@ bool EnsurePass(IDirect3DDevice9* device, int kind)
 		return true;
 	}
 
-	Report("the device refused the %s shader - it needs pixel shader 3.0",
+	Report("the device refused the %s shader: it needs pixel shader 3.0",
 		UpscaleFilter::GetName(kind));
 	return false;
 }
@@ -164,8 +164,8 @@ IDirect3DBaseTexture9* SceneUpscale::OnSetTexture(IDirect3DDevice9* device, DWOR
 
 	if (backBufferDesc.Width <= sourceDesc.Width || backBufferDesc.Height <= sourceDesc.Height)
 	{
-		Report("the scene is %ux%u into a %ux%u back buffer, so there is nothing to magnify - "
-			"raise the Improvements level or lower the scene resolution", sourceDesc.Width,
+		Report("the scene is %ux%u into a %ux%u back buffer, so there is nothing to magnify. "
+			"Raise the Improvements level or lower the scene resolution", sourceDesc.Width,
 			sourceDesc.Height, backBufferDesc.Width, backBufferDesc.Height);
 		return texture;
 	}

@@ -9,6 +9,7 @@ namespace ModFiles
 	bool Initialize();
 
 	void AddOverlay(IFileOverlay* overlay);
+	bool Find(const char* gamePath, std::string& out);
 	void Rescan();
 	void OnFrame();
 

@@ -323,7 +323,7 @@ bool StagePackage(const std::string& archive, const std::string& stage, Web::Job
 	if (Exists(UpdaterPath(stage)))
 		return true;
 
-	job.SetError("no " MBTL_IM_UPDATER_EXE " to hand the install to - download the release and "
+	job.SetError("no " MBTL_IM_UPDATER_EXE " to run the install. Download the release and "
 		"unzip it beside " MBTL_IM_GAME_EXE " yourself");
 	return false;
 }
@@ -447,7 +447,7 @@ void UpdateInstall::OnFrame()
 
 	if (!LaunchUpdater())
 	{
-		g_job.SetError("the updater would not start - install the release by hand");
+		g_job.SetError("the updater would not start. Install the release by hand");
 		return;
 	}
 

@@ -32,7 +32,7 @@ const Kernel kKernels[UpscaleFilter::Kind_COUNT] = {
 	},
 	{
 		"Lanczos",
-		"A windowed sinc over the same 4x4, sixteen taps. The sharpest, and the one that rings - a "
+		"A windowed sinc over the same 4x4, sixteen taps. The sharpest, and the one that rings: a "
 		"bright line beside a dark one gets a faint halo.",
 		kLanczosShader,
 		false,

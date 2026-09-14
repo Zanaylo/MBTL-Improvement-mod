@@ -187,6 +187,34 @@ bool KeyAt(const std::string& text, size_t at, const char* key, size_t length)
 		isalnum(static_cast<unsigned char>(after)) == 0 && after != '_';
 }
 
+bool IsKeyByte(char c)
+{
+	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_';
+}
+
+bool IsKeyStart(const std::string& text, size_t at)
+{
+	return IsKeyByte(text[at]) && (text[at] < '0' || text[at] > '9') && (at == 0 || !IsKeyByte(text[at - 1]));
+}
+
+size_t PairStart(const std::string& block, size_t after)
+{
+	const size_t anyLine = Skip(block, after, " \t\r\n");
+
+	if (anyLine < block.size() && (block[anyLine] == '[' || block[anyLine] == '{'))
+		return anyLine;
+
+	return Skip(block, after, " \t");
+}
+
+size_t PairEnd(const std::string& block, size_t value)
+{
+	if (value < block.size() && block[value] == '{')
+		return StageArchive::MatchPair(block, value);
+
+	return ValueEnd(block, value);
+}
+
 uint32_t BytesOf(const std::string& path)
 {
 	WIN32_FILE_ATTRIBUTE_DATA info = {};
@@ -739,6 +767,72 @@ bool StageArchive::Field(const std::string& block, const char* key, std::string&
 
 	out = block.substr(valueAt, valueEnd - valueAt);
 	return true;
+}
+
+void StageArchive::Pairs(const std::string& block, std::vector<Pair>& out)
+{
+	out.clear();
+
+	for (size_t at = 0; at < block.size(); ++at)
+	{
+		const uint8_t byte = static_cast<uint8_t>(block[at]);
+
+		if (LeadByte(byte))
+		{
+			++at;
+			continue;
+		}
+
+		const size_t skipped = SkipComment(block, at);
+
+		if (skipped != at)
+		{
+			at = skipped;
+			continue;
+		}
+
+		if (byte == '{' || byte == '[')
+		{
+			const size_t close = MatchPair(block, at);
+
+			if (close == std::string::npos)
+				return;
+
+			at = close - 1;
+			continue;
+		}
+
+		if (!IsKeyStart(block, at))
+			continue;
+
+		size_t end = at;
+
+		while (end < block.size() && IsKeyByte(block[end]))
+			++end;
+
+		const size_t equals = Skip(block, end, " \t");
+
+		if (equals >= block.size() || block[equals] != '=')
+		{
+			at = end - 1;
+			continue;
+		}
+
+		const size_t valueAt = PairStart(block, equals + 1);
+		const size_t valueEnd = PairEnd(block, valueAt);
+
+		if (valueEnd == std::string::npos)
+			return;
+
+		if (valueEnd <= valueAt)
+		{
+			at = valueAt - 1;
+			continue;
+		}
+
+		out.push_back({ block.substr(at, end - at), block.substr(valueAt, valueEnd - valueAt) });
+		at = valueEnd - 1;
+	}
 }
 
 std::string StageArchive::Unquoted(const std::string& value)

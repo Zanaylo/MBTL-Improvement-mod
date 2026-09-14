@@ -160,7 +160,7 @@ void DrawUserState(const UserTracks::Track& track)
 
 	if (!UserTracks::IsLive(track))
 	{
-		UiText::Warn("%03d holds another track - remove and import again", track.id);
+		UiText::Warn("%03d holds another track. Remove it and import again", track.id);
 		return;
 	}
 
@@ -285,9 +285,8 @@ void MusicPanel::DrawRandomizer()
 	if (ImGui::Checkbox("Randomizer", &enabled))
 		BgmShuffle::SetEnabled(enabled);
 
-	UiText::Help("On a screen none of your rules covers, play a random track from those ticked in the Draw "
-		"column. It draws once per screen and keeps that track until the game asks for different music. Tracks "
-		"that do not loop start unticked.");
+	UiText::Help("Plays a random track from the ones ticked in Draw on any screen your rules do not cover. The "
+		"track stays until the game asks for other music. Tracks that do not loop start unticked.");
 
 	ImGui::SameLine();
 	ImGui::BeginDisabled(!enabled);
@@ -313,8 +312,8 @@ void MusicPanel::DrawRandomizer()
 void MusicPanel::DrawVolumeTools()
 {
 	ImGui::TextUnformatted("Volume per track");
-	UiText::Help("Remembered in MBTL-IM\\Music\\music.ini and applied on top of the game's own BGM volume. It can "
-		"only hold a track back, never make it louder than it was recorded.");
+	UiText::Help("Saved in MBTL-IM\\Music\\music.ini and applied on top of the game's BGM volume. It can only make "
+		"a track quieter, never louder.");
 
 	if (!BgmVolume::IsHooked())
 		UiText::Warn("SetBgmVolume is not hooked, so changing the volume in the game's options resets a quieter "
@@ -445,9 +444,9 @@ void MusicPanel::DrawAddMusic()
 
 	ImGui::EndDisabled();
 
-	UiText::Help("The file is copied into MBTL-IM\\Mods\\Bgm under a free BGM number from 199 down. It plays at "
-		"once and is still there the next time the game starts. Only OGG Vorbis plays, and nothing is converted - "
-		"turn an MP3, WAV or FLAC into OGG Vorbis first, for example with Audacity.");
+	UiText::Help("Copies the file to MBTL-IM\\Mods\\Bgm under a free BGM number, counting down from 199. It plays "
+		"right away and stays after a restart. Only OGG Vorbis works. Convert MP3, WAV or FLAC to OGG Vorbis "
+		"first, for example with Audacity.");
 
 	ImGui::SameLine();
 
@@ -474,9 +473,8 @@ void MusicPanel::DrawAddMusic()
 void MusicPanel::DrawUserTable()
 {
 	ImGui::TextUnformatted("Your tracks");
-	UiText::Help("Loop from is where a looping track jumps back to when it reaches the end, in seconds. At 0 the "
-		"whole track repeats; past the intro it loops like the game's own music. A change applies the next time "
-		"the track starts.");
+	UiText::Help("Loop from is the second a looping track jumps back to when it ends. 0 repeats the whole track. "
+		"Set it past the intro to loop like the game's music. Changes apply the next time the track starts.");
 
 	if (!ImGui::BeginTable("##usertracks", 6, kListFlags, ImVec2(0.0f, Ui::Scaled(kUserHeight))))
 		return;
@@ -559,8 +557,8 @@ bool MusicPanel::DrawUserRow(const UserTracks::Track& track)
 void MusicPanel::DrawRules()
 {
 	UiText::Muted("A rule answers the game: when it asks for one track, play another.");
-	UiText::Help("The first switched-on rule for a track wins, and rules do not chain. A pick held from Browse "
-		"beats every rule, and the randomizer only covers screens no rule does.");
+	UiText::Help("For each track, the first active rule wins. Rules do not chain. A track held from Browse beats "
+		"every rule. The randomizer only covers screens with no rule.");
 
 	if (BgmRules::Count() == 0)
 	{

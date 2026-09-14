@@ -267,7 +267,7 @@ void MainWindow::DrawHitboxTypes()
 		Settings::SaveBool("Hitbox", "ShowOrigin", g_settings.hitboxShowOrigin);
 
 	if (ImGui::IsItemHovered())
-		ImGui::SetTooltip("A cross at each object's own position - the point its boxes are measured from.");
+		ImGui::SetTooltip("A cross at each object's position, the point its boxes are measured from.");
 
 	if (ImGui::BeginTable("##boxtypes", 4, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg |
 		ImGuiTableFlags_SizingStretchProp))
@@ -476,8 +476,8 @@ void MainWindow::DrawPaletteOptions()
 		Settings::SaveBool(kPalette, "GroupByPart", g_settings.paletteGroupByPart);
 
 	if (ImGui::IsItemHovered())
-		ImGui::SetTooltip("Groups the entries the way the game's own colour screen does - hair, skin, shoes - out of its "
-			"colour-edit table rather than by guessing.");
+		ImGui::SetTooltip("Groups the entries like the game's colour screen does (hair, skin, shoes), using its "
+			"colour edit table instead of guessing.");
 
 	if (ImGui::Checkbox("Flash the entry on the character", &g_settings.paletteFlashEntry))
 		Settings::SaveBool(kPalette, "FlashEntry", g_settings.paletteFlashEntry);
@@ -508,7 +508,7 @@ void MainWindow::DrawPaletteOptions()
 			"it too if they run the mod.");
 
 	if (PaletteControl::IsSpectating())
-		ImGui::TextDisabled("watching - the colours are the players' own");
+		ImGui::TextDisabled("watching: the colours are the players' own");
 	else if (PaletteControl::LocalPlayer() >= 0)
 		ImGui::TextDisabled(PaletteControl::LocalPlayer() == 0 ? "you are playing P1" : "you are playing P2");
 	else

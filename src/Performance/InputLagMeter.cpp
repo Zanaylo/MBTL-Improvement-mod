@@ -9,6 +9,7 @@
 
 #include <windows.h>
 
+#include <algorithm>
 #include <cstring>
 
 #ifndef CREATE_WAITABLE_TIMER_HIGH_RESOLUTION
@@ -94,30 +95,26 @@ uintptr_t ResolveInputOffset()
 	}
 
 	const size_t length = ImageScanner::FunctionLength(native);
-	uintptr_t found = 0;
-	int sites = 0;
+	std::vector<uintptr_t> offsets;
 
-	for (size_t i = 0; i + Input::kAddEcxLength + 5 <= length; ++i)
+	for (size_t i = 0; i + Input::kLoadLeverLength <= length; ++i)
 	{
-		if (std::memcmp(native + i, Input::kAddEcx, sizeof(Input::kAddEcx)) != 0)
+		if (std::memcmp(native + i, Input::kLoadLeverByte, sizeof(Input::kLoadLeverByte)) != 0)
+			continue;
+		if ((native[i + sizeof(Input::kLoadLeverByte)] & Input::kLoadLeverModRmMask) != Input::kLoadLeverModRm)
 			continue;
 
-		++sites;
+		const uintptr_t lever = ImageScanner::ReadDword(native + i + Input::kLoadLeverOffsetAt);
 
-		const uint8_t* const call = native + i + Input::kAddEcxLength;
-		const uint8_t* const getter = call[0] == 0xE8 ? call + 5 + static_cast<int32_t>(ImageScanner::ReadDword(call + 1)) : nullptr;
-
-		if (getter && ImageScanner::InCode(getter, sizeof(Input::kLeverGetterPrologue)) &&
-			std::memcmp(getter, Input::kLeverGetterPrologue, sizeof(Input::kLeverGetterPrologue)) == 0)
-		{
-			found = ImageScanner::ReadDword(native + i + sizeof(Input::kAddEcx));
-		}
+		if (lever >= Input::kLeverShift / 8 && std::find(offsets.begin(), offsets.end(), lever) == offsets.end())
+			offsets.push_back(lever);
 	}
 
-	if (sites == 1 && found != 0)
-		return found;
+	if (offsets.size() == 1)
+		return offsets.front() - Input::kLeverShift / 8;
 
-	LOG("InputLagMeter: %s has %d input field load(s), expected exactly one", Input::kStickNative, sites);
+	LOG("InputLagMeter: %s reads %u lever field(s), expected exactly one", Input::kStickNative,
+		static_cast<unsigned>(offsets.size()));
 	return 0;
 }
 

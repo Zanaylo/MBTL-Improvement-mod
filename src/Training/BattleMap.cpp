@@ -5,6 +5,7 @@
 #include "Game/GameOffsets.h"
 #include "Hooks/ImageScanner.h"
 
+#include <algorithm>
 #include <cstring>
 #include <map>
 #include <set>
@@ -18,19 +19,13 @@ namespace Objects = GameOffsets::Objects;
 namespace CameraOffsets = GameOffsets::Camera;
 namespace Meter = GameOffsets::Meter;
 
-constexpr uint8_t kLoadEcx = 0xB9;
-constexpr uint8_t kCall = 0xE8;
-constexpr size_t kLoadLength = 5;
-constexpr size_t kLoadAndCallLength = 10;
-constexpr uint8_t kImul = 0x69;
-constexpr uint8_t kAddEax = 0x05;
-constexpr uint8_t kAddGroup = 0x81;
-constexpr uint8_t kMovByte = 0xC6;
-constexpr uint8_t kCompareGroup = 0x83;
-constexpr uint8_t kAbsoluteOperand = 0x3D;
-constexpr size_t kCompareLength = 7;
-
 BattleAddresses g_addresses;
+
+struct Indexed
+{
+	uint32_t stride = 0;
+	uintptr_t base = 0;
+};
 
 uint8_t* Only(const std::vector<uint8_t*>& list, const char* what)
 {
@@ -73,69 +68,314 @@ size_t ModRmLength(const uint8_t* modrm)
 	return length;
 }
 
-uint8_t* ResolveBattleStep()
-{
-	const uint8_t* const create = Only(ImageScanner::FunctionsReferencing(ImageScanner::FindString(Battle::kStepAnchor)),
-		"BattleProc Create");
-
-	if (!create)
-		return nullptr;
-
-	std::vector<uint8_t*> matches;
-
-	for (uint8_t* caller : ImageScanner::CallerFunctions(create))
-	{
-		const size_t length = ImageScanner::FunctionLength(caller);
-
-		if (length == 0 || length > Battle::kStepMaxLength)
-			continue;
-
-		if (std::memcmp(caller, Battle::kStepPrologue, sizeof(Battle::kStepPrologue)) != 0)
-			continue;
-
-		matches.push_back(caller);
-	}
-
-	return Only(matches, "BattleStep");
-}
-
-uintptr_t ObjectBehindNative(const char* binding)
+const uint8_t* NativeOf(const char* binding)
 {
 	const uint8_t* const native = ImageScanner::NativeFunction(binding);
 
 	if (!native)
-	{
 		LOG("BattleMap: the script native %s was not found", binding);
-		return 0;
-	}
 
-	const std::vector<uint8_t*> calls = ImageScanner::CallSequence(native);
-	return calls.empty() ? 0 : ImageScanner::GetterValue(calls.front());
+	return native;
 }
 
-uintptr_t ResolveSession()
+uintptr_t AddedBase(const uint8_t* from)
 {
-	const uint8_t* const user = Only(ImageScanner::FunctionsReferencing(ImageScanner::FindWideString(Battle::kSessionAnchor)),
-		"p_session");
-
-	if (!user)
-		return 0;
-
-	const uint8_t* const caller = Only(ImageScanner::CallerFunctions(user), "p_session caller");
-
-	if (!caller)
-		return 0;
-
-	for (size_t i = 0; i < Battle::kSessionCompareWindow; ++i)
+	for (size_t k = 0; k < Objects::kStrideSearchWindow; ++k)
 	{
-		const uint8_t* const at = caller + i;
+		const uint8_t* const at = from + k;
 
-		if (at[0] == kCompareGroup && at[1] == kAbsoluteOperand && at[kCompareLength - 1] == 0)
+		if (at[0] == Objects::kAddEax && ImageScanner::InData(ImageScanner::ReadDword(at + 1)))
+			return ImageScanner::ReadDword(at + 1);
+
+		if (at[0] == Objects::kAddGroup && (at[1] & 0xF8) == 0xC0 &&
+			ImageScanner::InData(ImageScanner::ReadDword(at + 2)))
+		{
 			return ImageScanner::ReadDword(at + 2);
+		}
 	}
 
-	LOG("BattleMap: the session check has no compare against a global");
 	return 0;
+}
+
+std::vector<Indexed> IndexedArrays(const uint8_t* function)
+{
+	std::vector<Indexed> found;
+
+	if (!function)
+		return found;
+
+	const size_t length = ImageScanner::FunctionLength(function);
+
+	for (size_t i = 0; i + Objects::kIndexerLength < length; ++i)
+	{
+		if (function[i] != Objects::kImul)
+			continue;
+
+		const uint8_t* const immediate = function + i + 1 + ModRmLength(function + i + 1);
+		const uintptr_t base = AddedBase(immediate + sizeof(uint32_t));
+
+		if (base == 0)
+			continue;
+
+		const Indexed entry = { ImageScanner::ReadDword(immediate), base };
+
+		const bool seen = std::any_of(found.begin(), found.end(),
+			[&entry](const Indexed& other) { return other.base == entry.base && other.stride == entry.stride; });
+
+		if (!seen)
+			found.push_back(entry);
+	}
+
+	return found;
+}
+
+void ResolveCharactersAndTeams()
+{
+	const std::vector<Indexed> arrays = IndexedArrays(NativeOf(Objects::kActivePlayerNative));
+
+	if (arrays.size() != Objects::kIndexedArrays)
+	{
+		LOG("BattleMap: IsActivePlayer indexes %u array(s), expected %u", static_cast<unsigned>(arrays.size()),
+			static_cast<unsigned>(Objects::kIndexedArrays));
+		return;
+	}
+
+	if (arrays[0].stride <= arrays[1].stride)
+	{
+		LOG("BattleMap: the team record (0x%X) is not bigger than the character record (0x%X)", arrays[0].stride,
+			arrays[1].stride);
+		return;
+	}
+
+	g_addresses.teams = arrays[0].base;
+	g_addresses.teamStride = arrays[0].stride;
+	g_addresses.charaArray = arrays[1].base;
+	g_addresses.charaStride = arrays[1].stride;
+}
+
+void ResolveCombos()
+{
+	std::vector<Indexed> arrays;
+
+	for (const char* binding : Meter::kComboNatives)
+	{
+		for (const Indexed& entry : IndexedArrays(NativeOf(binding)))
+		{
+			const bool seen = std::any_of(arrays.begin(), arrays.end(),
+				[&entry](const Indexed& other) { return other.base == entry.base && other.stride == entry.stride; });
+
+			if (!seen)
+				arrays.push_back(entry);
+		}
+	}
+
+	if (arrays.size() != 1)
+	{
+		LOG("BattleMap: the combo records have %u candidate(s), expected exactly one",
+			static_cast<unsigned>(arrays.size()));
+		return;
+	}
+
+	g_addresses.combos = arrays.front().base + Meter::kComboRecordSkip;
+	g_addresses.comboStride = arrays.front().stride;
+}
+
+uintptr_t ResolveBattleInfo()
+{
+	const uint8_t* const native = NativeOf(Battle::kTrainingNative);
+
+	if (!native)
+		return 0;
+
+	const size_t length = ImageScanner::FunctionLength(native);
+	std::set<uintptr_t> modes;
+
+	for (size_t i = 0; i + Objects::kLoadEcxGlobalLength <= length; ++i)
+	{
+		if (std::memcmp(native + i, Objects::kLoadEcxGlobal, sizeof(Objects::kLoadEcxGlobal)) != 0)
+			continue;
+
+		const uintptr_t mode = ImageScanner::ReadDword(native + i + sizeof(Objects::kLoadEcxGlobal));
+
+		if (ImageScanner::InData(mode))
+			modes.insert(mode);
+	}
+
+	const uintptr_t mode = OnlyValue(modes, "the battle mode");
+
+	if (mode == 0)
+		return 0;
+
+	const auto subMode = static_cast<uint32_t>(mode + (Battle::kSubMode - Battle::kMode));
+
+	if (!ImageScanner::Contains(native, length, reinterpret_cast<const uint8_t*>(&subMode), sizeof(subMode)))
+	{
+		LOG("BattleMap: IsTrainingBattle does not read the sub-mode next to the mode");
+		return 0;
+	}
+
+	return mode - Battle::kMode;
+}
+
+uintptr_t ResolveCamera()
+{
+	const uint8_t* const native = NativeOf(CameraOffsets::kPositionNative);
+
+	if (!native)
+		return 0;
+
+	const size_t length = ImageScanner::FunctionLength(native);
+	std::set<uintptr_t> globals;
+
+	for (size_t i = 0; i + 1 + sizeof(uint32_t) <= length; ++i)
+	{
+		if (native[i] != CameraOffsets::kLoadEaxGlobal)
+			continue;
+
+		const uintptr_t value = ImageScanner::ReadDword(native + i + 1);
+
+		if (ImageScanner::InData(value))
+			globals.insert(value);
+	}
+
+	if (globals.size() != static_cast<size_t>(CameraOffsets::kElementCount))
+	{
+		LOG("BattleMap: the camera has %u element(s), expected %d", static_cast<unsigned>(globals.size()),
+			CameraOffsets::kElementCount);
+		return 0;
+	}
+
+	uintptr_t previous = 0;
+
+	for (uintptr_t value : globals)
+	{
+		if (previous != 0 && value - previous != CameraOffsets::kElementBytes)
+		{
+			LOG("BattleMap: the camera elements are not %u bytes apart",
+				static_cast<unsigned>(CameraOffsets::kElementBytes));
+			return 0;
+		}
+
+		previous = value;
+	}
+
+	return *globals.begin() - CameraOffsets::kElementX;
+}
+
+uintptr_t ResolveEffectList()
+{
+	std::set<uintptr_t> lists;
+
+	for (uint8_t* at : ImageScanner::FindBytes(ImageScanner::Code(), Objects::kEffectSpawnStore,
+		sizeof(Objects::kEffectSpawnStore)))
+	{
+		if (at[-2] != Objects::kStoreByte || (at[-1] & 0xF8) != 0x80 || (at[-1] & 7) == 4)
+			continue;
+
+		for (size_t k = sizeof(Objects::kEffectSpawnStore); k + sizeof(Objects::kCountUp) + 4 < Objects::kEffectListWindow; ++k)
+		{
+			if (std::memcmp(at + k, Objects::kCountUp, sizeof(Objects::kCountUp)) != 0)
+				continue;
+
+			const uintptr_t list = ImageScanner::ReadDword(at + k + sizeof(Objects::kCountUp));
+
+			if (ImageScanner::InData(list))
+				lists.insert(list);
+
+			break;
+		}
+	}
+
+	return OnlyValue(lists, "effect list");
+}
+
+std::vector<uint8_t*> BattleTicks()
+{
+	const uint8_t* const create = Only(ImageScanner::FunctionsReferencing(ImageScanner::FindString(Battle::kStepAnchor)),
+		"BattleProc Create");
+
+	std::vector<uint8_t*> ticks;
+
+	if (!create)
+		return ticks;
+
+	for (uint8_t* site : ImageScanner::CallersOf(create))
+	{
+		uint8_t* const function = ImageScanner::FunctionStart(site);
+
+		if (function && std::find(ticks.begin(), ticks.end(), function) == ticks.end())
+			ticks.push_back(function);
+	}
+
+	return ticks;
+}
+
+uint8_t* ResolveBattleUpdate(const uint8_t* create)
+{
+	if (!create)
+		return nullptr;
+
+	std::map<uint8_t*, int> votes;
+
+	for (uint8_t* site : ImageScanner::CallersOf(create))
+	{
+		for (size_t i = Battle::kCallLength; i < Battle::kUpdateWindow; ++i)
+		{
+			uint8_t* const target = ImageScanner::CallTargetOf(site + i);
+
+			if (!target)
+				continue;
+
+			++votes[target];
+			break;
+		}
+	}
+
+	const auto best = std::max_element(votes.begin(), votes.end(),
+		[](const std::pair<uint8_t* const, int>& a, const std::pair<uint8_t* const, int>& b) { return a.second < b.second; });
+
+	if (best != votes.end() && best->second >= Battle::kLeastUpdateVotes)
+		return best->first;
+
+	LOG("BattleMap: no consistent battle update after BattleProc Create (%d)", best == votes.end() ? 0 : best->second);
+	return nullptr;
+}
+
+uintptr_t ResolveSession(const std::vector<uint8_t*>& ticks)
+{
+	std::map<uintptr_t, int> counts;
+
+	for (uint8_t* tick : ticks)
+	{
+		const size_t length = ImageScanner::FunctionLength(tick);
+		std::set<uintptr_t> seen;
+
+		for (size_t i = 0; i + Battle::kNullTestLength <= length; ++i)
+		{
+			if (std::memcmp(tick + i, Battle::kLoadEcxGlobal, sizeof(Battle::kLoadEcxGlobal)) != 0)
+				continue;
+			if (std::memcmp(tick + i + Battle::kNullTestAt, Battle::kTestEcx, sizeof(Battle::kTestEcx)) != 0)
+				continue;
+
+			const uintptr_t global = ImageScanner::ReadDword(tick + i + sizeof(Battle::kLoadEcxGlobal));
+
+			if (ImageScanner::InData(global))
+				seen.insert(global);
+		}
+
+		for (uintptr_t global : seen)
+			++counts[global];
+	}
+
+	std::set<uintptr_t> sessions;
+
+	for (const std::pair<const uintptr_t, int>& entry : counts)
+	{
+		if (entry.second >= Battle::kLeastSessionTicks)
+			sessions.insert(entry.first);
+	}
+
+	return OnlyValue(sessions, "the online session");
 }
 
 uintptr_t ResolvePause()
@@ -146,261 +386,47 @@ uintptr_t ResolvePause()
 	if (!printer)
 		return 0;
 
-	uintptr_t best = 0;
-	int bestCount = 0;
+	std::map<uintptr_t, int> counts;
 
 	for (uint8_t* caller : ImageScanner::CallerFunctions(printer))
 	{
-		std::map<uintptr_t, int> counts;
 		const size_t length = ImageScanner::FunctionLength(caller);
 
-		for (size_t i = 0; i + 5 <= length; ++i)
+		for (size_t i = 0; i + 1 + sizeof(uint32_t) <= length; ++i)
 		{
-			if (caller[i] == kLoadEcx)
-				++counts[ImageScanner::ReadDword(caller + i + 1)];
-		}
-
-		for (const std::pair<const uintptr_t, int>& entry : counts)
-		{
-			if (entry.second <= bestCount)
+			if (caller[i] != Battle::kLoadEcxImmediate)
 				continue;
 
-			best = entry.first;
-			bestCount = entry.second;
+			const uintptr_t object = ImageScanner::ReadDword(caller + i + 1);
+
+			if (ImageScanner::InData(object))
+				++counts[object];
 		}
 	}
 
-	if (bestCount >= Battle::kPauseLeastLoads)
-		return best;
+	int best = 0;
+	int second = 0;
+	uintptr_t winner = 0;
 
-	LOG("BattleMap: the pause controller loads no object often enough (%d)", bestCount);
+	for (const std::pair<const uintptr_t, int>& entry : counts)
+	{
+		if (entry.second > best)
+		{
+			second = best;
+			best = entry.second;
+			winner = entry.first;
+			continue;
+		}
+
+		if (entry.second > second)
+			second = entry.second;
+	}
+
+	if (best >= Battle::kPauseLeastLoads && best >= second * Battle::kPauseMajority)
+		return winner;
+
+	LOG("BattleMap: the pause controller loads no object often enough (%d)", best);
 	return 0;
-}
-
-uintptr_t AddedBase(const uint8_t* from)
-{
-	for (size_t k = 0; k < Objects::kStrideSearchWindow; ++k)
-	{
-		const uint8_t* const at = from + k;
-
-		if (at[0] == kAddEax && ImageScanner::InData(ImageScanner::ReadDword(at + 1)))
-			return ImageScanner::ReadDword(at + 1);
-
-		if (at[0] == kAddGroup && (at[1] & 0xF8) == 0xC0 && ImageScanner::InData(ImageScanner::ReadDword(at + 2)))
-			return ImageScanner::ReadDword(at + 2);
-	}
-
-	return 0;
-}
-
-uintptr_t ResolveCharaArray(uint32_t& stride)
-{
-	const uint8_t* const native = ImageScanner::NativeFunction(Objects::kActivePlayerNative);
-
-	if (!native)
-	{
-		LOG("BattleMap: the script native %s was not found", Objects::kActivePlayerNative);
-		return 0;
-	}
-
-	const size_t length = ImageScanner::FunctionLength(native);
-	std::set<std::pair<uint32_t, uintptr_t>> pairs;
-
-	for (size_t i = 0; i + 1 + 6 + 4 + Objects::kStrideSearchWindow + 6 < length; ++i)
-	{
-		if (native[i] != kImul)
-			continue;
-
-		const uint8_t* const immediate = native + i + 1 + ModRmLength(native + i + 1);
-		const uint32_t value = ImageScanner::ReadDword(immediate);
-
-		if (value < Objects::kLeastStride || value > Objects::kMostStride)
-			continue;
-
-		const uintptr_t base = AddedBase(immediate + 4);
-
-		if (base)
-			pairs.insert({ value, base });
-	}
-
-	if (pairs.size() != 1)
-	{
-		LOG("BattleMap: the character array has %u candidate(s), expected exactly one", static_cast<unsigned>(pairs.size()));
-		return 0;
-	}
-
-	stride = pairs.begin()->first;
-	return pairs.begin()->second;
-}
-
-uintptr_t ResolveEffectList()
-{
-	std::set<uintptr_t> lists;
-	const size_t storeLength = sizeof(Objects::kEffectSpawnStore);
-
-	for (uint8_t* at : ImageScanner::FindBytes(ImageScanner::Code(), Objects::kEffectSpawnStore, storeLength))
-	{
-		if (at[-2] != kMovByte || (at[-1] & 0xF8) != 0x80 || (at[-1] & 7) == 4)
-			continue;
-
-		for (size_t k = storeLength; k + 2 < Objects::kEffectListWindow; ++k)
-		{
-			if (at[k] != kLoadEcx || !ImageScanner::InData(ImageScanner::ReadDword(at + k + 1)))
-				continue;
-
-			lists.insert(ImageScanner::ReadDword(at + k + 1));
-			break;
-		}
-	}
-
-	return OnlyValue(lists, "effect list");
-}
-
-uintptr_t ResolveCamera()
-{
-	const uint8_t* const native = ImageScanner::NativeFunction(CameraOffsets::kPositionNative);
-
-	if (!native)
-	{
-		LOG("BattleMap: the script native %s was not found", CameraOffsets::kPositionNative);
-		return 0;
-	}
-
-	std::set<uintptr_t> cameras;
-
-	for (uint8_t* target : ImageScanner::CallTargets(native))
-	{
-		const std::vector<uint8_t*> inner = ImageScanner::CallSequence(target);
-
-		if (inner.empty())
-			continue;
-
-		const uintptr_t value = ImageScanner::GetterValue(inner.front());
-
-		if (value)
-			cameras.insert(value);
-	}
-
-	return OnlyValue(cameras, "camera");
-}
-
-uintptr_t ResolveTeams(uint32_t& stride)
-{
-	const uint8_t* const native = ImageScanner::NativeFunction(Meter::kTeamNative);
-
-	if (!native)
-	{
-		LOG("BattleMap: the script native %s was not found", Meter::kTeamNative);
-		return 0;
-	}
-
-	std::set<std::pair<uint32_t, uintptr_t>> found;
-
-	for (uint8_t* target : ImageScanner::CallTargets(native))
-	{
-		if (!ImageScanner::InCode(target, Meter::kTeamIndexerLength))
-			continue;
-
-		if (std::memcmp(target, Meter::kTeamIndexerHead, sizeof(Meter::kTeamIndexerHead)) != 0 ||
-			target[Meter::kTeamIndexerAddAt] != Meter::kTeamIndexerAdd ||
-			std::memcmp(target + Meter::kTeamIndexerTailAt, Meter::kTeamIndexerTail, sizeof(Meter::kTeamIndexerTail)) != 0)
-		{
-			continue;
-		}
-
-		found.insert({ ImageScanner::ReadDword(target + Meter::kTeamIndexerStrideAt),
-			ImageScanner::ReadDword(target + Meter::kTeamIndexerBaseAt) });
-	}
-
-	if (found.size() != 1)
-	{
-		LOG("BattleMap: the team records have %u candidate(s), expected exactly one", static_cast<unsigned>(found.size()));
-		return 0;
-	}
-
-	stride = found.begin()->first;
-	return found.begin()->second;
-}
-
-const uint8_t* FindInFunction(const uint8_t* function, const uint8_t* bytes, size_t count)
-{
-	const size_t length = ImageScanner::FunctionLength(function);
-
-	for (size_t i = 0; i + count + 4 <= length; ++i)
-	{
-		if (std::memcmp(function + i, bytes, count) == 0)
-			return function + i + count;
-	}
-
-	return nullptr;
-}
-
-bool ReadComboIndexer(const uint8_t* function, uint32_t& stride, uint32_t& offset)
-{
-	if (!ImageScanner::InCode(function, 1))
-		return false;
-
-	const uint8_t* const strideAt = FindInFunction(function, Meter::kComboStride, sizeof(Meter::kComboStride));
-	const uint8_t* const offsetAt = FindInFunction(function, Meter::kComboOffset, sizeof(Meter::kComboOffset));
-
-	if (!strideAt || !offsetAt)
-		return false;
-
-	stride = ImageScanner::ReadDword(strideAt);
-	offset = ImageScanner::ReadDword(offsetAt);
-	return true;
-}
-
-void CollectComboRecords(const uint8_t* native, std::set<std::pair<uint32_t, uintptr_t>>& found)
-{
-	const size_t length = ImageScanner::FunctionLength(native);
-
-	for (size_t i = 0; i + kLoadAndCallLength <= length; ++i)
-	{
-		if (native[i] != kLoadEcx || native[i + kLoadLength] != kCall)
-			continue;
-
-		const uintptr_t base = ImageScanner::ReadDword(native + i + 1);
-
-		if (!ImageScanner::InData(base))
-			continue;
-
-		const int32_t displacement = static_cast<int32_t>(ImageScanner::ReadDword(native + i + kLoadLength + 1));
-		const uint8_t* const callee = native + i + kLoadAndCallLength + displacement;
-
-		uint32_t stride = 0;
-		uint32_t offset = 0;
-
-		if (ReadComboIndexer(callee, stride, offset))
-			found.insert({ stride, base + offset + Meter::kComboRecordSkip });
-	}
-}
-
-uintptr_t ResolveCombos(uint32_t& stride)
-{
-	std::set<std::pair<uint32_t, uintptr_t>> found;
-
-	for (const char* binding : Meter::kComboNatives)
-	{
-		const uint8_t* const native = ImageScanner::NativeFunction(binding);
-
-		if (!native)
-		{
-			LOG("BattleMap: the script native %s was not found", binding);
-			continue;
-		}
-
-		CollectComboRecords(native, found);
-	}
-
-	if (found.size() != 1)
-	{
-		LOG("BattleMap: the combo records have %u candidate(s), expected exactly one", static_cast<unsigned>(found.size()));
-		return 0;
-	}
-
-	stride = found.begin()->first;
-	return found.begin()->second;
 }
 
 }
@@ -410,17 +436,21 @@ bool BattleMap::Initialize()
 	if (!ImageScanner::Initialize())
 		return false;
 
-	g_addresses.battleStep = ResolveBattleStep();
-	g_addresses.battleInfo = ObjectBehindNative(Battle::kTrainingNative);
-	g_addresses.session = ResolveSession();
+	const std::vector<uint8_t*> ticks = BattleTicks();
+	const uint8_t* const create = ticks.empty()
+		? nullptr
+		: ImageScanner::FunctionsReferencing(ImageScanner::FindString(Battle::kStepAnchor)).front();
+
+	g_addresses.battleUpdate = ResolveBattleUpdate(create);
+	g_addresses.battleInfo = ResolveBattleInfo();
+	g_addresses.session = ResolveSession(ticks);
 	g_addresses.pause = ResolvePause();
-	g_addresses.charaArray = ResolveCharaArray(g_addresses.charaStride);
+	ResolveCharactersAndTeams();
 	g_addresses.effectList = ResolveEffectList();
 	g_addresses.camera = ResolveCamera();
-	g_addresses.teams = ResolveTeams(g_addresses.teamStride);
-	g_addresses.combos = ResolveCombos(g_addresses.comboStride);
+	ResolveCombos();
 
-	Anchors::Record("BattleStep", reinterpret_cast<uintptr_t>(g_addresses.battleStep), "pause and next frame");
+	Anchors::Record("Battle update", reinterpret_cast<uintptr_t>(g_addresses.battleUpdate), "pause and next frame");
 	Anchors::Record("Battle info", g_addresses.battleInfo, "mode and frame counter");
 	Anchors::Record("GGPO session", g_addresses.session, "online check");
 	Anchors::Record("Game pause", g_addresses.pause, "the game's own pause menu");
@@ -432,7 +462,8 @@ bool BattleMap::Initialize()
 
 	LOG("BattleMap: character stride 0x%X, team stride 0x%X, combo stride 0x%X", g_addresses.charaStride,
 		g_addresses.teamStride, g_addresses.comboStride);
-	return g_addresses.battleStep != nullptr;
+
+	return g_addresses.battleInfo != 0 && g_addresses.charaArray != 0;
 }
 
 const BattleAddresses& BattleMap::Addresses()

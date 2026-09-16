@@ -20,10 +20,10 @@ int g_logged = 0;
 
 void SceneWatch::OnFrame()
 {
-	const uintptr_t manager = SceneMap::Addresses().manager;
+	const uintptr_t sceneId = SceneMap::Addresses().sceneId;
 	uint32_t scene = 0;
 
-	if (manager == 0 || !TryRead(manager + GameOffsets::Scenes::kSceneId, scene))
+	if (sceneId == 0 || !TryRead(sceneId, scene))
 		return;
 
 	if (scene != g_candidate)

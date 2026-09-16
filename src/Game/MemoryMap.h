@@ -10,7 +10,6 @@ struct GameFunctions
 	uint8_t* fileExists = nullptr;
 	uint8_t* readerCtor = nullptr;
 	uint8_t* readerClose = nullptr;
-	uint8_t* readerDtor = nullptr;
 };
 
 namespace MemoryMap

@@ -20,38 +20,41 @@ namespace {
 
 namespace Draw = GameOffsets::Draw;
 
-using ObjectDraw_t = int(__cdecl*)(int, int, void*);
 using ObjectType_t = int(__fastcall*)(void*, void*);
 
-constexpr int kFlagMask = 0xFF;
-constexpr int kTrackedTypes = 32;
-
-ObjectDraw_t oObjectDraw = nullptr;
+void* oObjectDraw = nullptr;
 
 bool g_hooked = false;
 volatile LONG g_seenTypes = 0;
 const char* g_status = "does not work in this game version";
 
-std::vector<uint8_t*> Unique(const std::vector<uint8_t*>& list)
+constexpr int kTrackedTypes = 8;
+
+bool IsTypeCall(const uint8_t* at)
 {
-	std::vector<uint8_t*> unique;
-
-	for (uint8_t* value : list)
-	{
-		if (std::find(unique.begin(), unique.end(), value) == unique.end())
-			unique.push_back(value);
-	}
-
-	return unique;
+	return at[0] == Draw::kCallSlot && (at[1] >> 6) == 1 && ((at[1] >> 3) & 7) == Draw::kCallSlotDigit &&
+		at[2] == Draw::kTypeSlot * sizeof(uint32_t);
 }
 
-bool HasActiveTest(const uint8_t* function, size_t length)
+bool ComparesEffectType(const uint8_t* after)
 {
-	for (size_t i = 0; i + Draw::kActiveDisplacementAt + sizeof(Draw::kActiveDisplacement) <= length; ++i)
+	const uint8_t compare[] = { Draw::kCompareEax[0], Draw::kCompareEax[1], static_cast<uint8_t>(Draw::kEffectType) };
+
+	return ImageScanner::Contains(after, Draw::kTypeCompareWindow, compare, sizeof(compare));
+}
+
+bool ChecksOwnerActive(const uint8_t* function, size_t length)
+{
+	for (size_t i = 0; i + Draw::kActiveTestLength <= length; ++i)
 	{
-		if (std::memcmp(function + i, Draw::kMovzx, sizeof(Draw::kMovzx)) == 0 &&
-			std::memcmp(function + i + Draw::kActiveDisplacementAt, Draw::kActiveDisplacement,
-				sizeof(Draw::kActiveDisplacement)) == 0)
+		if (function[i] != Draw::kCompareByte || (function[i + 1] & 0xC0) != 0x80 ||
+			((function[i + 1] >> 3) & 7) != Draw::kCompareDigit)
+		{
+			continue;
+		}
+
+		if (std::memcmp(function + i + 2, Draw::kActiveDisplacement, sizeof(Draw::kActiveDisplacement)) == 0 &&
+			function[i + Draw::kActiveTestLength - 1] == 0)
 		{
 			return true;
 		}
@@ -60,63 +63,50 @@ bool HasActiveTest(const uint8_t* function, size_t length)
 	return false;
 }
 
-bool IsWalker(const uint8_t* function)
-{
-	const size_t length = ImageScanner::FunctionLength(function);
-
-	return ImageScanner::Contains(function, length, Draw::kTypeTwoCompare, sizeof(Draw::kTypeTwoCompare)) &&
-		HasActiveTest(function, length);
-}
-
-uint8_t* ResolveWalker(const uint8_t* update)
-{
-	std::vector<uint8_t*> walkers;
-
-	for (uint8_t* target : Unique(ImageScanner::CallsCleanedBy(update, Draw::kTwoArgumentCleanup,
-		sizeof(Draw::kTwoArgumentCleanup))))
-	{
-		if (IsWalker(target))
-			walkers.push_back(target);
-	}
-
-	if (walkers.size() == 1)
-		return walkers.front();
-
-	LOG("CharacterDraw: the draw list walker has %u candidate(s), expected exactly one",
-		static_cast<unsigned>(walkers.size()));
-	return nullptr;
-}
-
 uint8_t* Resolve()
 {
-	const uint8_t* const step = BattleMap::Addresses().battleStep;
-	const std::vector<uint8_t*> stepCalls = step ? ImageScanner::CallSequence(step) : std::vector<uint8_t*>();
+	const uint8_t* const update = BattleMap::Addresses().battleUpdate;
 
-	if (stepCalls.empty())
+	if (!update)
 		return nullptr;
 
-	const uint8_t* const walker = ResolveWalker(stepCalls.back());
+	const std::vector<uint8_t*> drawn = ImageScanner::CallTargets(update);
+	const ImageSection code = ImageScanner::Code();
 
-	if (!walker)
-		return nullptr;
+	std::vector<uint8_t*> walkers;
+	std::vector<uint8_t*> found;
 
-	const std::vector<uint8_t*> draws = Unique(ImageScanner::CallsCleanedBy(walker, Draw::kThreeArgumentCleanup,
-		sizeof(Draw::kThreeArgumentCleanup)));
-
-	if (draws.size() != 1)
+	for (size_t i = 0; i + Draw::kTypeCallLength + Draw::kTypeCompareWindow < code.size; ++i)
 	{
-		LOG("CharacterDraw: the object draw has %u candidate(s), expected exactly one", static_cast<unsigned>(draws.size()));
-		return nullptr;
+		uint8_t* const at = code.begin + i;
+
+		if (!IsTypeCall(at) || !ComparesEffectType(at + Draw::kTypeCallLength))
+			continue;
+
+		uint8_t* const walker = ImageScanner::FunctionStart(at);
+
+		if (!walker || std::find(walkers.begin(), walkers.end(), walker) != walkers.end())
+			continue;
+
+		walkers.push_back(walker);
+
+		const size_t length = ImageScanner::FunctionLength(walker);
+		const std::vector<uint8_t*> calls = ImageScanner::CallTargets(walker);
+
+		if (length == 0 || calls.size() != 1 || !ChecksOwnerActive(walker, length))
+			continue;
+		if (std::find(drawn.begin(), drawn.end(), calls.front()) == drawn.end())
+			continue;
+
+		found.push_back(calls.front());
 	}
 
-	if (!ImageScanner::Contains(draws.front(), ImageScanner::FunctionLength(draws.front()), Draw::kDrawFlagReturn,
-		sizeof(Draw::kDrawFlagReturn)))
-	{
-		LOG("CharacterDraw: the object draw does not return early on its draw flag");
-		return nullptr;
-	}
+	if (found.size() == 1)
+		return found.front();
 
-	return draws.front();
+	LOG("CharacterDraw: the draw list walker has %u candidate(s), expected exactly one",
+		static_cast<unsigned>(found.size()));
+	return nullptr;
 }
 
 int TypeOf(void* object)
@@ -144,15 +134,34 @@ bool Hides(void* object)
 	return type == Draw::kCharacterType || (type == Draw::kEffectType && g_settings.hideEffects);
 }
 
-int __cdecl HookedObjectDraw(int sim, int draw, void* object)
+int __cdecl ChooseDraw(int draw, void* object)
 {
-	if (!g_settings.hideCharacters || object == nullptr || (draw & kFlagMask) == 0)
-		return oObjectDraw(sim, draw, object);
+	if (!g_settings.hideCharacters || object == nullptr || draw == 0)
+		return draw;
 
 	if (!GameState::IsOnlineKnown() || GameState::IsOnline() || !Hides(object))
-		return oObjectDraw(sim, draw, object);
+		return draw;
 
-	return oObjectDraw(sim, 0, object);
+	return 0;
+}
+
+__declspec(naked) void HookedObjectDraw()
+{
+	__asm
+	{
+		push ebp
+		mov ebp, esp
+		push ecx
+		push dword ptr [ebp + 8]
+		movzx eax, dl
+		push eax
+		call ChooseDraw
+		add esp, 8
+		pop ecx
+		movzx edx, al
+		pop ebp
+		jmp dword ptr [oObjectDraw]
+	}
 }
 
 }
@@ -169,8 +178,7 @@ void CharacterDraw::Install()
 		return;
 	}
 
-	g_hooked = HookManager::CreateHook(draw, reinterpret_cast<void*>(&HookedObjectDraw),
-		reinterpret_cast<void**>(&oObjectDraw), "object draw");
+	g_hooked = HookManager::CreateHook(draw, reinterpret_cast<void*>(&HookedObjectDraw), &oObjectDraw, "object draw");
 
 	g_status = g_hooked ? "" : "could not start";
 	LOG("CharacterDraw: %s", g_hooked ? "ready" : g_status);

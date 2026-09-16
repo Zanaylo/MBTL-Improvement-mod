@@ -13,7 +13,7 @@ namespace {
 
 namespace Music = GameOffsets::Music;
 
-using SetBgmVolume_t = void(__cdecl*)(int, int);
+using SetBgmVolume_t = void(__fastcall*)(int, int);
 
 constexpr const char* kSection = "Volume";
 constexpr int kEngineStep = Music::kFullVolume / BgmVolume::kFullPercent;
@@ -46,7 +46,7 @@ int SlotVolume(int id)
 	return value;
 }
 
-void __cdecl HookedSetBgmVolume(int base, int track)
+void __fastcall HookedSetBgmVolume(int base, int track)
 {
 	const int id = BgmTable::CurrentId();
 

@@ -42,10 +42,12 @@ namespace ImageScanner
 	uint8_t* NativeFunction(const char* bindingName);
 	uintptr_t GetterValue(const uint8_t* function);
 	uintptr_t MemoryGetterValue(const uint8_t* function);
+	uintptr_t ByteGetterValue(const uint8_t* function);
 
 	uint8_t* ImportSlot(const char* library, const char* function);
 	bool Contains(const uint8_t* start, size_t length, const uint8_t* bytes, size_t count);
 	const uint8_t* AfterPushOf(const uint8_t* function, size_t length, const uint8_t* value);
 	bool ReturnsWith(const uint8_t* function, uint16_t stackBytes);
+	uint8_t* Epilogue(uint8_t* function);
 	bool CallsImport(const uint8_t* function, const char* library, const char* name);
 }

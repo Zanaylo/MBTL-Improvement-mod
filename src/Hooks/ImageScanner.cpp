@@ -11,6 +11,7 @@ namespace {
 
 constexpr size_t kMaxFunctionWalk = 0x4000;
 constexpr size_t kMaxFunctionBody = 0x10000;
+constexpr size_t kFunctionAlignment = 16;
 constexpr uint8_t kPushEbp = 0x55;
 constexpr uint8_t kMovEbpEsp[] = { 0x8B, 0xEC };
 constexpr uint8_t kInt3 = 0xCC;
@@ -19,14 +20,38 @@ constexpr uint8_t kRetImm = 0xC2;
 constexpr size_t kRetImmLength = 3;
 constexpr uint8_t kCall = 0xE8;
 constexpr size_t kCallLength = 5;
+constexpr uint8_t kJumpNear = 0xE9;
+constexpr size_t kJumpNearLength = 5;
+constexpr uint8_t kJumpShort = 0xEB;
+constexpr size_t kJumpShortLength = 2;
 constexpr uint8_t kPushImm = 0x68;
 constexpr size_t kPushLength = 5;
-constexpr uint8_t kGetterHead[] = { 0x55, 0x8B, 0xEC, 0xB8 };
-constexpr uint8_t kMemoryGetterHead[] = { 0x55, 0x8B, 0xEC, 0xA1 };
+constexpr size_t kNativeWindow = 0x28;
+constexpr uint8_t kStoreLocal = 0xC7;
+constexpr uint8_t kStoreNearModRm = 0x45;
+constexpr size_t kStoreNearValueAt = 3;
+constexpr uint8_t kStoreFarModRm = 0x85;
+constexpr size_t kStoreFarValueAt = 6;
+constexpr size_t kStoreFarLength = 10;
+constexpr uint8_t kMovEaxImm = 0xB8;
+constexpr uint8_t kMovEaxMemory = 0xA1;
+constexpr uint8_t kMovAlMemory = 0xA0;
+constexpr uint8_t kFramedHead[] = { 0x55, 0x8B, 0xEC };
 constexpr uint8_t kGetterTail[] = { 0x5D, 0xC3 };
-constexpr size_t kGetterLength = 10;
-constexpr size_t kGetterValueAt = 4;
-constexpr size_t kGetterTailAt = 8;
+constexpr size_t kBareGetterLength = 6;
+constexpr size_t kFramedGetterLength = 10;
+constexpr size_t kPrologueLength = 3;
+constexpr size_t kSmallestFramedFunction = 16;
+constexpr uint8_t kSehFrame[] = { 0x6A, 0xFF };
+constexpr uint8_t kPushEcx = 0x51;
+constexpr uint8_t kSubEspByte[] = { 0x83, 0xEC };
+constexpr size_t kSubEspByteLength = 3;
+constexpr uint8_t kSubEspDword[] = { 0x81, 0xEC };
+constexpr size_t kSubEspDwordLength = 6;
+constexpr uint8_t kMovEspEbp[] = { 0x8B, 0xE5 };
+constexpr uint8_t kPopEbp = 0x5D;
+constexpr uint8_t kSavedPushes[] = { 0x53, 0x56, 0x57 };
+constexpr uint8_t kSavedPops[] = { 0x5B, 0x5E, 0x5F };
 
 uint8_t* g_base = nullptr;
 ImageSection g_code;
@@ -36,6 +61,7 @@ uint32_t g_timeDateStamp = 0;
 
 using CallPair = std::pair<const uint8_t*, uint8_t*>;
 std::vector<CallPair> g_calls;
+std::vector<uint8_t*> g_starts;
 
 IMAGE_NT_HEADERS32* HeadersOf(uint8_t* base)
 {
@@ -68,12 +94,11 @@ bool IsPrologue(const uint8_t* at)
 
 bool FollowsBoundary(const uint8_t* at)
 {
-	return at[-1] == kInt3 || at[-1] == kRet || at[-3] == kRetImm;
-}
+	if (!Inside(g_code, at - kJumpNearLength, kJumpNearLength))
+		return false;
 
-bool EndsHere(const uint8_t* after)
-{
-	return ImageScanner::InCode(after, 3) && (after[0] == kInt3 || IsPrologue(after));
+	return at[-1] == kInt3 || at[-1] == kRet || *(at - kRetImmLength) == kRetImm ||
+		*(at - kJumpNearLength) == kJumpNear || *(at - kJumpShortLength) == kJumpShort;
 }
 
 uint8_t* CallTargetAt(const uint8_t* site)
@@ -106,18 +131,137 @@ void BuildCallIndex()
 	std::sort(g_calls.begin(), g_calls.end());
 }
 
-uintptr_t GetterWith(const uint8_t* function, const uint8_t head[sizeof(kGetterHead)])
+void BuildFunctionIndex()
 {
-	if (!ImageScanner::InCode(function, kGetterLength))
+	if (!g_starts.empty())
+		return;
+
+	BuildCallIndex();
+
+	const uint8_t* const last = g_code.begin + g_code.size;
+
+	for (uint8_t* cursor = g_code.begin + 1; cursor < last; ++cursor)
+	{
+		cursor = static_cast<uint8_t*>(std::memchr(cursor, kInt3, static_cast<size_t>(last - cursor)));
+		if (!cursor)
+			break;
+
+		uint8_t* const start = cursor + 1;
+		if (start >= last || *start == kInt3)
+			continue;
+		if ((reinterpret_cast<uintptr_t>(start) % kFunctionAlignment) != 0)
+			continue;
+
+		const uint8_t* run = cursor;
+		while (run > g_code.begin && run[-1] == kInt3)
+			--run;
+
+		if (FollowsBoundary(run))
+			g_starts.push_back(start);
+	}
+
+	for (const CallPair& call : g_calls)
+	{
+		uint8_t* const target = const_cast<uint8_t*>(call.first);
+
+		if (FollowsBoundary(target))
+			g_starts.push_back(target);
+	}
+
+	std::sort(g_starts.begin(), g_starts.end());
+	g_starts.erase(std::unique(g_starts.begin(), g_starts.end()), g_starts.end());
+}
+
+uint8_t* NextStart(const uint8_t* start)
+{
+	BuildFunctionIndex();
+
+	const auto next = std::upper_bound(g_starts.begin(), g_starts.end(), start);
+	return next == g_starts.end() ? nullptr : *next;
+}
+
+uintptr_t GetterWith(const uint8_t* function, uint8_t opcode)
+{
+	if (!ImageScanner::InCode(function, kFramedGetterLength))
 		return 0;
 
-	if (std::memcmp(function, head, sizeof(kGetterHead)) != 0 ||
-		std::memcmp(function + kGetterTailAt, kGetterTail, sizeof(kGetterTail)) != 0)
+	if (function[0] == opcode && function[kBareGetterLength - 1] == kRet)
+		return ImageScanner::ReadDword(function + 1);
+
+	if (std::memcmp(function, kFramedHead, sizeof(kFramedHead)) != 0)
+		return 0;
+
+	if (function[kPrologueLength] != opcode ||
+		std::memcmp(function + kFramedGetterLength - sizeof(kGetterTail), kGetterTail, sizeof(kGetterTail)) != 0)
 	{
 		return 0;
 	}
 
-	return ImageScanner::ReadDword(function + kGetterValueAt);
+	return ImageScanner::ReadDword(function + kPrologueLength + 1);
+}
+
+bool IsOneOf(uint8_t value, const uint8_t* values, size_t count)
+{
+	return std::find(values, values + count, value) != values + count;
+}
+
+struct Frame
+{
+	bool locals = false;
+	size_t saved = 0;
+};
+
+Frame FrameOf(const uint8_t* function)
+{
+	Frame frame;
+	size_t cursor = kPrologueLength;
+
+	if (function[cursor] == kPushEcx)
+	{
+		frame.locals = true;
+		cursor += sizeof(kPushEcx);
+	}
+	else if (std::memcmp(function + cursor, kSubEspByte, sizeof(kSubEspByte)) == 0)
+	{
+		frame.locals = true;
+		cursor += kSubEspByteLength;
+	}
+	else if (std::memcmp(function + cursor, kSubEspDword, sizeof(kSubEspDword)) == 0)
+	{
+		frame.locals = true;
+		cursor += kSubEspDwordLength;
+	}
+
+	while (IsOneOf(function[cursor + frame.saved], kSavedPushes, sizeof(kSavedPushes)))
+		++frame.saved;
+
+	return frame;
+}
+
+uint8_t* AddressIn(uint32_t value)
+{
+	const auto address = reinterpret_cast<uint8_t*>(static_cast<uintptr_t>(value));
+	return ImageScanner::InCode(address, 1) ? address : nullptr;
+}
+
+uint8_t* NativeBefore(const uint8_t* push)
+{
+	for (size_t i = 1; i <= kNativeWindow; ++i)
+	{
+		const uint8_t* const at = push - i;
+
+		if (!Inside(g_code, at, kStoreFarLength))
+			return nullptr;
+
+		if (at[0] == kPushImm)
+			return AddressIn(ImageScanner::ReadDword(at + 1));
+		if (at[0] == kStoreLocal && at[1] == kStoreNearModRm)
+			return AddressIn(ImageScanner::ReadDword(at + kStoreNearValueAt));
+		if (at[0] == kStoreLocal && at[1] == kStoreFarModRm)
+			return AddressIn(ImageScanner::ReadDword(at + kStoreFarValueAt));
+	}
+
+	return nullptr;
 }
 
 }
@@ -158,6 +302,7 @@ bool ImageScanner::Initialize()
 void ImageScanner::ReleaseCallIndex()
 {
 	std::vector<CallPair>().swap(g_calls);
+	std::vector<uint8_t*>().swap(g_starts);
 }
 
 uint8_t* ImageScanner::Base()
@@ -243,30 +388,27 @@ uint8_t* ImageScanner::FunctionStart(uint8_t* inside)
 	if (!InCode(inside, 1))
 		return nullptr;
 
-	for (uint8_t* cursor = inside; cursor > g_code.begin + 3; --cursor)
-	{
-		if (static_cast<size_t>(inside - cursor) > kMaxFunctionWalk)
-			return nullptr;
-		if (IsPrologue(cursor) && FollowsBoundary(cursor))
-			return cursor;
-	}
+	BuildFunctionIndex();
 
-	return nullptr;
+	const auto next = std::upper_bound(g_starts.begin(), g_starts.end(), inside);
+	if (next == g_starts.begin())
+		return nullptr;
+
+	uint8_t* const start = *(next - 1);
+	return static_cast<size_t>(inside - start) <= kMaxFunctionWalk ? start : nullptr;
 }
 
 size_t ImageScanner::FunctionLength(const uint8_t* start)
 {
-	for (size_t i = 0; i < kMaxFunctionBody; ++i)
-	{
-		if (!InCode(start + i, 4))
-			return 0;
-		if (start[i] == kRet && EndsHere(start + i + 1))
-			return i + 1;
-		if (start[i] == kRetImm && EndsHere(start + i + 3))
-			return i + 3;
-	}
+	const uint8_t* const next = NextStart(start);
+	if (!next || static_cast<size_t>(next - start) > kMaxFunctionBody)
+		return 0;
 
-	return 0;
+	const uint8_t* end = next;
+	while (end > start && end[-1] == kInt3)
+		--end;
+
+	return static_cast<size_t>(end - start);
 }
 
 std::vector<uint8_t*> ImageScanner::CallSequence(const uint8_t* function)
@@ -373,28 +515,38 @@ uint8_t* ImageScanner::NativeFunction(const char* bindingName)
 		return nullptr;
 
 	uint8_t* native = nullptr;
-	int pushes = 0;
+	int found = 0;
 
 	for (uint8_t* site : FindReferencesTo(names[0]))
 	{
-		if (*(site - 1) != kPushImm || *(site - 1 - kPushLength) != kPushImm)
+		if (*(site - 1) != kPushImm)
 			continue;
 
-		native = reinterpret_cast<uint8_t*>(static_cast<uintptr_t>(ReadDword(site - kPushLength)));
-		++pushes;
+		uint8_t* const address = NativeBefore(site - 1);
+		if (!address)
+			continue;
+
+		native = address;
+		++found;
 	}
 
-	return pushes == 1 && InCode(native, 1) ? native : nullptr;
+	return found == 1 ? native : nullptr;
 }
 
 uintptr_t ImageScanner::GetterValue(const uint8_t* function)
 {
-	return GetterWith(function, kGetterHead);
+	return GetterWith(function, kMovEaxImm);
 }
 
 uintptr_t ImageScanner::MemoryGetterValue(const uint8_t* function)
 {
-	const uintptr_t address = GetterWith(function, kMemoryGetterHead);
+	const uintptr_t address = GetterWith(function, kMovEaxMemory);
+	return InData(address) ? address : 0;
+}
+
+uintptr_t ImageScanner::ByteGetterValue(const uint8_t* function)
+{
+	const uintptr_t address = GetterWith(function, kMovAlMemory);
 	return InData(address) ? address : 0;
 }
 
@@ -462,11 +614,53 @@ bool ImageScanner::ReturnsWith(const uint8_t* function, uint16_t stackBytes)
 	const size_t length = FunctionLength(function);
 	uint16_t popped = 0;
 
+	if (length == 0)
+		return false;
+
+	if (stackBytes == 0 && function[length - 1] == kRet)
+		return true;
+
 	if (length < kRetImmLength || function[length - kRetImmLength] != kRetImm)
 		return false;
 
 	std::memcpy(&popped, function + length - sizeof(popped), sizeof(popped));
 	return popped == stackBytes;
+}
+
+uint8_t* ImageScanner::Epilogue(uint8_t* function)
+{
+	const size_t length = FunctionLength(function);
+
+	if (length < kSmallestFramedFunction || !IsPrologue(function) ||
+		std::memcmp(function + kPrologueLength, kSehFrame, sizeof(kSehFrame)) == 0)
+	{
+		return nullptr;
+	}
+
+	const size_t ret = function[length - kRetImmLength] == kRetImm ? length - kRetImmLength : length - 1;
+
+	if ((function[ret] != kRet && function[ret] != kRetImm) || function[ret - 1] != kPopEbp)
+		return nullptr;
+
+	size_t exit = ret - 1;
+	const bool restoresStack =
+		std::memcmp(function + exit - sizeof(kMovEspEbp), kMovEspEbp, sizeof(kMovEspEbp)) == 0;
+
+	if (restoresStack)
+		exit -= sizeof(kMovEspEbp);
+
+	const Frame frame = FrameOf(function);
+
+	if (frame.locals && !restoresStack)
+		return nullptr;
+
+	for (size_t i = 0; i < frame.saved; ++i, --exit)
+	{
+		if (!IsOneOf(function[exit - 1], kSavedPops, sizeof(kSavedPops)))
+			return nullptr;
+	}
+
+	return function + exit;
 }
 
 bool ImageScanner::CallsImport(const uint8_t* function, const char* library, const char* name)
@@ -475,9 +669,14 @@ bool ImageScanner::CallsImport(const uint8_t* function, const char* library, con
 	if (!slot)
 		return false;
 
-	uint8_t call[6] = { 0xFF, 0x15 };
-	const auto slotAddress = static_cast<uint32_t>(reinterpret_cast<uintptr_t>(slot));
-	std::memcpy(call + 2, &slotAddress, sizeof(slotAddress));
+	const auto address = static_cast<uint32_t>(reinterpret_cast<uintptr_t>(slot));
+	const size_t length = FunctionLength(function);
 
-	return Contains(function, FunctionLength(function), call, sizeof(call));
+	for (size_t i = 0; i + sizeof(address) <= length; ++i)
+	{
+		if (ReadDword(function + i) == address)
+			return true;
+	}
+
+	return false;
 }

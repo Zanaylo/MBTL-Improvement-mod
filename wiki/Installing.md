@@ -20,6 +20,9 @@ Turn the check off with **Check for updates on start** under Config, or `[Mod] C
 Add `WINEDLLOVERRIDES="dinput8=n,b" %command%` to the game's launch options, or rename `dinput8.dll` to
 `d3d9.dll`. Keep only one of the two names in the folder.
 
+The game's "Assertion failed" dialogs, which Proton cannot get past, never open with the mod installed. The mod
+skips them the way **Ignore** does on Windows and writes each one to `MBTL-IM\Logs`.
+
 ## Uninstalling
 
 Delete `dinput8.dll`. The `MBTL-IM` folder can stay; the game ignores it without the dll.

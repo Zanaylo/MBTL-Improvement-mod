@@ -15,27 +15,9 @@ namespace {
 namespace Music = GameOffsets::Music;
 
 constexpr size_t kNotFound = static_cast<size_t>(-1);
-constexpr size_t kOpcodeBytes = 2;
 constexpr size_t kOperandBytes = 4;
 constexpr uint32_t kStoredOne = 1;
 constexpr uint32_t kStoredZero = 0;
-constexpr uint8_t kStoreEax = 0xA3;
-constexpr uint8_t kAddEcx[] = { 0x81, 0xC1 };
-constexpr uint8_t kStoreConstant[] = { 0xC7, 0x05 };
-constexpr uint8_t kStoreEcx[] = { 0x89, 0x0D };
-constexpr uint8_t kStoreEdx[] = { 0x89, 0x15 };
-constexpr uint8_t kClearTable[] = { 0x68, 0x00, 0x32, 0x00, 0x00 };
-constexpr uint8_t kBoundCheck[] = { 0x81, 0x7D, 0x08, 0xC8, 0x00, 0x00, 0x00 };
-constexpr uint8_t kFullVolumeCheck[] = { 0x81, 0x7D, 0x0C, 0x10, 0x27, 0x00, 0x00 };
-constexpr uint8_t kGlobalGetterHead[] = { 0x55, 0x8B, 0xEC, 0xA1 };
-constexpr uint8_t kGlobalGetterTail[] = { 0x5D, 0xC3 };
-constexpr size_t kSetStop = 1;
-constexpr size_t kSetPlay = 2;
-constexpr size_t kSetStart = 3;
-constexpr size_t kStopGetCurrent = 0;
-constexpr size_t kStopMuted = 1;
-constexpr size_t kStopSetVolume = 3;
-constexpr size_t kStopCalls = 5;
 constexpr int kMostAnchors = 16;
 
 struct Body
@@ -72,25 +54,20 @@ size_t Find(const Body& body, const uint8_t* bytes, size_t count, size_t from = 
 	return kNotFound;
 }
 
-size_t After(size_t at, size_t skip)
-{
-	return at == kNotFound ? kNotFound : at + skip;
-}
-
-int Count(const Body& body, const uint8_t* bytes, size_t count)
-{
-	int found = 0;
-
-	for (size_t at = Find(body, bytes, count); at != kNotFound; at = Find(body, bytes, count, at + 1))
-		++found;
-
-	return found;
-}
-
 bool Mentions(const Body& body, uintptr_t address)
 {
-	const uint32_t value = static_cast<uint32_t>(address);
-	return address != 0 && Find(body, reinterpret_cast<const uint8_t*>(&value), sizeof(value)) != kNotFound;
+	if (address == 0 || body.length < kOperandBytes)
+		return false;
+
+	const auto value = static_cast<uint32_t>(address);
+
+	for (size_t i = 0; i + kOperandBytes <= body.length; ++i)
+	{
+		if (ImageScanner::ReadDword(body.start + i) == value)
+			return true;
+	}
+
+	return false;
 }
 
 uintptr_t DataAt(const Body& body, size_t at)
@@ -102,63 +79,75 @@ uintptr_t DataAt(const Body& body, size_t at)
 	return ImageScanner::InData(value) ? value : 0;
 }
 
-uintptr_t Confirmed(uintptr_t address, const Body& user, const char* what)
+std::vector<uintptr_t> GlobalsAfter(const Body& body, const uint8_t* opcode, size_t count)
 {
-	if (Mentions(user, address))
-		return address;
+	std::vector<uintptr_t> values;
 
-	LOG("Music: the %s store was not confirmed by the function that reads it, so it is not used", what);
-	return 0;
-}
-
-size_t FindConstantStore(const Body& body, uint32_t value, size_t from = 0)
-{
-	for (size_t at = Find(body, kStoreConstant, sizeof(kStoreConstant), from); at != kNotFound;
-		at = Find(body, kStoreConstant, sizeof(kStoreConstant), at + 1))
+	for (size_t at = Find(body, opcode, count); at != kNotFound; at = Find(body, opcode, count, at + 1))
 	{
-		const size_t constant = at + kOpcodeBytes + kOperandBytes;
+		const uintptr_t value = DataAt(body, at + count);
 
-		if (constant + sizeof(value) <= body.length && std::memcmp(body.start + constant, &value, sizeof(value)) == 0)
-			return at;
+		if (value != 0 && std::find(values.begin(), values.end(), value) == values.end())
+			values.push_back(value);
 	}
 
-	return kNotFound;
+	return values;
 }
 
-uintptr_t LastEaxStoreBefore(const Body& body, size_t before)
+std::vector<uintptr_t> ConstantStores(const Body& body, uint32_t constant)
 {
-	for (size_t at = before; at-- > 0;)
+	std::vector<uintptr_t> values;
+
+	for (size_t at = Find(body, Music::kStoreConstant, sizeof(Music::kStoreConstant)); at != kNotFound;
+		at = Find(body, Music::kStoreConstant, sizeof(Music::kStoreConstant), at + 1))
 	{
-		if (body.start[at] != kStoreEax)
+		if (at + Music::kConstantAt + sizeof(constant) > body.length)
+			continue;
+		if (std::memcmp(body.start + at + Music::kConstantAt, &constant, sizeof(constant)) != 0)
 			continue;
 
-		const uintptr_t address = DataAt(body, at + 1);
+		const uintptr_t value = DataAt(body, at + Music::kOperandAt);
 
-		if (address != 0)
-			return address;
+		if (value != 0 && std::find(values.begin(), values.end(), value) == values.end())
+			values.push_back(value);
 	}
 
+	return values;
+}
+
+uintptr_t OnlyGlobal(const std::vector<uintptr_t>& values, const char* what)
+{
+	if (values.size() == 1)
+		return values.front();
+
+	LOG("Music: %u candidate(s) for the %s global, expected exactly one", static_cast<unsigned>(values.size()),
+		what);
 	return 0;
 }
 
-uintptr_t GlobalGetterValue(const uint8_t* function)
+uint8_t* OnlyTailJump(const Body& body, const char* what)
 {
-	const size_t length = sizeof(kGlobalGetterHead) + kOperandBytes + sizeof(kGlobalGetterTail);
+	std::vector<uint8_t*> targets;
 
-	if (!ImageScanner::InCode(function, length))
-		return 0;
-
-	if (std::memcmp(function, kGlobalGetterHead, sizeof(kGlobalGetterHead)) != 0)
-		return 0;
-
-	if (std::memcmp(function + sizeof(kGlobalGetterHead) + kOperandBytes, kGlobalGetterTail,
-		sizeof(kGlobalGetterTail)) != 0)
+	for (size_t at = 0; at + Music::kJumpNearLength <= body.length; ++at)
 	{
-		return 0;
+		if (body.start[at] != Music::kJumpNear)
+			continue;
+
+		const auto target = const_cast<uint8_t*>(body.start + at + Music::kJumpNearLength +
+			static_cast<int32_t>(ImageScanner::ReadDword(body.start + at + 1)));
+
+		if (!ImageScanner::InCode(target, 1) || target != ImageScanner::FunctionStart(target))
+			continue;
+		if (std::find(targets.begin(), targets.end(), target) == targets.end())
+			targets.push_back(target);
 	}
 
-	const uintptr_t value = ImageScanner::ReadDword(function + sizeof(kGlobalGetterHead));
-	return ImageScanner::InData(value) ? value : 0;
+	if (targets.size() == 1)
+		return targets.front();
+
+	LOG("Music: %u tail jump(s) for %s, expected exactly one", static_cast<unsigned>(targets.size()), what);
+	return nullptr;
 }
 
 uint8_t* Unique(const std::vector<uint8_t*>& functions, const char* what)
@@ -180,136 +169,115 @@ void ResolveTable()
 	if (loader.length == 0)
 		return;
 
-	if (Count(loader, kClearTable, sizeof(kClearTable)) == 0)
+	const size_t at = Find(loader, Music::kClearTable, sizeof(Music::kClearTable));
+
+	if (at == kNotFound)
 	{
 		LOG("Music: the bgm.txt loader no longer clears a 200-slot table, so the table is not trusted");
 		return;
 	}
 
-	g_addresses.table = DataAt(loader, After(Find(loader, kAddEcx, sizeof(kAddEcx)), kOpcodeBytes));
-}
-
-uint8_t* CalledAmong(const uint8_t* function, const std::vector<uint8_t*>& candidates)
-{
-	for (uint8_t* target : ImageScanner::CallTargets(function))
-	{
-		if (std::find(candidates.begin(), candidates.end(), target) != candidates.end())
-			return target;
-	}
-
-	return nullptr;
-}
-
-void NoteExtensions(const std::vector<uint8_t*>& extensions)
-{
-	if (extensions.size() == 1)
-		return;
-
-	LOG("Music: %u function(s) reference the extension string", static_cast<unsigned>(extensions.size()));
-
-	for (uint8_t* extension : extensions)
-		LOG("Music:   %s", DescribeAddress(AddressOf(extension)).c_str());
-}
-
-void ResolvePlay()
-{
-	g_addresses.pathBuilder = Unique(ImageScanner::FunctionsReferencing(
-		ImageScanner::FindWideString(Music::kPathBuilderAssert)), "BGM path builder");
-
-	const std::vector<uint8_t*> extensions =
-		ImageScanner::FunctionsReferencing(ImageScanner::FindString(Music::kExtensionAnchor));
-
-	NoteExtensions(extensions);
-
-	if (g_addresses.pathBuilder == nullptr || extensions.empty())
-		return;
-
-	std::vector<uint8_t*> players;
-
-	for (uint8_t* caller : ImageScanner::CallerFunctions(g_addresses.pathBuilder))
-	{
-		if (CalledAmong(caller, extensions) != nullptr)
-			players.push_back(caller);
-	}
-
-	uint8_t* const play = Unique(players, "PlayBgm");
-
-	if (play == nullptr)
-		return;
-
-	if (Count(BodyOf(play), kBoundCheck, sizeof(kBoundCheck)) != 1)
-	{
-		LOG("Music: PlayBgm no longer checks its id against 200 exactly once, so it is not hooked");
-		return;
-	}
-
-	g_addresses.extension = CalledAmong(play, extensions);
-	g_addresses.play = play;
+	g_addresses.table = DataAt(loader, at + Music::kClearTableValueAt);
 }
 
 void ResolveCommands()
 {
-	const std::vector<uint8_t*> calls = ImageScanner::CallSequence(ImageScanner::NativeFunction(Music::kSetNative));
+	const uint8_t* const native = ImageScanner::NativeFunction(Music::kSetNative);
 
-	if (g_addresses.play == nullptr || calls.size() <= kSetStart || calls[kSetPlay] != g_addresses.play)
+	if (native == nullptr)
 	{
-		LOG("Music: BGM_Set does not call stop, play, start as expected (%u call(s))",
+		LOG("Music: the script native BGM_Set was not found");
+		return;
+	}
+
+	const std::vector<uint8_t*> calls = ImageScanner::CallSequence(native);
+
+	if (calls.size() < Music::kLeastSetCalls)
+	{
+		LOG("Music: BGM_Set makes %u call(s), expected stop and play among them",
 			static_cast<unsigned>(calls.size()));
 		return;
 	}
 
-	g_addresses.stop = calls[kSetStop];
-	g_addresses.start = calls[kSetStart];
+	uint8_t* const stop = calls[calls.size() - 2];
+	uint8_t* const play = calls[calls.size() - 1];
+	uint8_t* const start = OnlyTailJump(BodyOf(native), "StartBgm");
 
-	const std::vector<uint8_t*> stopCalls = ImageScanner::CallSequence(g_addresses.stop);
+	const std::vector<uint8_t*> extensions =
+		ImageScanner::FunctionsReferencing(ImageScanner::FindString(Music::kExtensionAnchor));
+	const std::vector<uint8_t*> played = ImageScanner::CallSequence(play);
 
-	if (stopCalls.size() != kStopCalls)
+	size_t extensionAt = kNotFound;
+
+	for (size_t i = 0; i < played.size(); ++i)
 	{
-		LOG("Music: StopBgm makes %u call(s), expected %u", static_cast<unsigned>(stopCalls.size()),
-			static_cast<unsigned>(kStopCalls));
+		if (std::find(extensions.begin(), extensions.end(), played[i]) != extensions.end())
+			extensionAt = i;
+	}
+
+	if (start == nullptr || played.empty() || played.front() != stop || extensionAt == kNotFound || extensionAt == 0)
+	{
+		LOG("Music: PlayBgm does not stop the player and build a path as expected, so it is not hooked");
 		return;
 	}
 
-	g_addresses.getCurrent = stopCalls[kStopGetCurrent];
-	g_addresses.muted = GlobalGetterValue(stopCalls[kStopMuted]);
+	g_addresses.stop = stop;
+	g_addresses.play = play;
+	g_addresses.start = start;
+	g_addresses.extension = played[extensionAt];
+	g_addresses.pathBuilder = played[extensionAt - 1];
 
-	if (Count(BodyOf(stopCalls[kStopSetVolume]), kFullVolumeCheck, sizeof(kFullVolumeCheck)) != 1)
-	{
-		LOG("Music: SetBgmVolume does not compare its track volume with 10000, so it is not hooked");
-		return;
-	}
+	const std::vector<uint8_t*> stopped = ImageScanner::CallSequence(stop);
+	uint8_t* const volume = stopped.empty() ? nullptr : stopped.back();
 
-	g_addresses.setVolume = stopCalls[kStopSetVolume];
+	if (volume != nullptr && volume == OnlyTailJump(BodyOf(start), "SetBgmVolume"))
+		g_addresses.setVolume = volume;
+	else
+		LOG("Music: StopBgm and StartBgm do not end in the same volume call, so SetBgmVolume is not hooked");
 }
 
 void ResolvePlayerGlobals()
 {
 	const Body play = BodyOf(g_addresses.play);
-	const Body getCurrent = BodyOf(g_addresses.getCurrent);
-	const size_t loadedAt = FindConstantStore(play, kStoredOne);
+	const Body stop = BodyOf(g_addresses.stop);
+	const Body start = BodyOf(g_addresses.start);
 
-	if (loadedAt == kNotFound || loadedAt < kOperandBytes + 1 || play.start[loadedAt - kOperandBytes - 1] != kStoreEax)
-	{
-		LOG("Music: PlayBgm's closing stores were not found, so the player state is unknown");
+	if (play.length == 0 || stop.length == 0 || start.length == 0)
 		return;
+
+	g_addresses.muted = OnlyGlobal(GlobalsAfter(play, Music::kCompareGlobal, sizeof(Music::kCompareGlobal)),
+		"BGM off");
+	g_addresses.loaded = OnlyGlobal(ConstantStores(play, kStoredOne), "BGM loaded");
+	g_addresses.currentId = OnlyGlobal(ConstantStores(play, Music::kNoTrack), "current BGM id");
+	g_addresses.state = OnlyGlobal(ConstantStores(stop, kStoredZero), "BGM state");
+	g_addresses.trackVolume = OnlyGlobal(GlobalsAfter(start, Music::kLoadEdx, sizeof(Music::kLoadEdx)),
+		"BGM track volume");
+
+	std::vector<uintptr_t> streams;
+
+	for (uintptr_t value : GlobalsAfter(play, &Music::kStoreEax, sizeof(Music::kStoreEax)))
+	{
+		if (value != g_addresses.trackVolume)
+			streams.push_back(value);
 	}
 
-	g_addresses.loaded = DataAt(play, loadedAt + kOpcodeBytes);
-	g_addresses.trackVolume = DataAt(play, loadedAt - kOperandBytes);
-	g_addresses.stream = Confirmed(LastEaxStoreBefore(play, loadedAt - kOperandBytes - 1), getCurrent, "BGM stream");
-	g_addresses.currentId = Confirmed(DataAt(play, After(Find(play, kStoreEcx, sizeof(kStoreEcx), loadedAt),
-		kOpcodeBytes)), getCurrent, "current BGM id");
+	g_addresses.stream = OnlyGlobal(streams, "BGM stream");
 
-	const Body stop = BodyOf(g_addresses.stop);
-	g_addresses.state = Confirmed(DataAt(stop, After(FindConstantStore(stop, kStoredZero), kOpcodeBytes)), getCurrent,
-		"BGM state");
+	std::vector<uintptr_t> bases;
 
-	const Body volume = BodyOf(g_addresses.setVolume);
+	for (uintptr_t value : GlobalsAfter(start, Music::kLoadEcx, sizeof(Music::kLoadEcx)))
+	{
+		if (value != g_addresses.stream)
+			bases.push_back(value);
+	}
 
-	if (!Mentions(volume, g_addresses.trackVolume))
-		return;
+	g_addresses.baseVolume = OnlyGlobal(bases, "BGM base volume");
 
-	g_addresses.baseVolume = DataAt(volume, After(Find(volume, kStoreEdx, sizeof(kStoreEdx)), kOpcodeBytes));
+	if (g_addresses.trackVolume != 0 && !Mentions(BodyOf(g_addresses.setVolume), g_addresses.trackVolume))
+	{
+		LOG("Music: SetBgmVolume does not read the track volume, so the per-track volume is not used");
+		g_addresses.trackVolume = 0;
+	}
 }
 
 void Name(const char* name, uintptr_t address, const char* note)
@@ -333,7 +301,6 @@ void RecordAll()
 	Name("PlayBgm", AddressOf(g_addresses.play), "the music hook");
 	Name("StopBgm", AddressOf(g_addresses.stop), "needed for Stop and Play from the window");
 	Name("StartBgm", AddressOf(g_addresses.start), "needed for Play from the window");
-	Name("GetCurrentBgm", AddressOf(g_addresses.getCurrent), "");
 	Name("SetBgmVolume", AddressOf(g_addresses.setVolume), "keeps the per-track volume");
 	Name("BGM stream", g_addresses.stream, "");
 	Name("BGM track volume", g_addresses.trackVolume, "");
@@ -356,7 +323,6 @@ void MusicAnchors::Resolve()
 	}
 
 	ResolveTable();
-	ResolvePlay();
 	ResolveCommands();
 	ResolvePlayerGlobals();
 	RecordAll();

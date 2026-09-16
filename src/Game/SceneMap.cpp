@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <cstring>
+#include <map>
 #include <vector>
 
 namespace {
@@ -15,196 +16,219 @@ namespace Scenes = GameOffsets::Scenes;
 
 SceneAddresses g_addresses;
 
-uint8_t* ResolveStep()
+struct Store
 {
-	const std::vector<uint8_t*> steps =
-		ImageScanner::FunctionsReferencing(ImageScanner::FindWideString(Scenes::kStepAnchor));
+	size_t at = 0;
+	uintptr_t address = 0;
+	uint32_t value = 0;
+};
 
-	if (steps.size() != 1)
-	{
-		LOG("SceneMap: the scene step has %u candidate(s), expected exactly one", static_cast<unsigned>(steps.size()));
-		return nullptr;
-	}
+bool ReadStore(const uint8_t* function, size_t length, size_t at, Store& out)
+{
+	if (at + Scenes::kStoreLength > length)
+		return false;
+	if (std::memcmp(function + at, Scenes::kStoreGlobal, sizeof(Scenes::kStoreGlobal)) != 0)
+		return false;
 
-	const std::vector<uint8_t*> sites = ImageScanner::CallersOf(steps.front());
-
-	if (sites.size() != 1 ||
-		std::memcmp(sites.front() + Scenes::kCallLength, Scenes::kOneArgumentCleanup, sizeof(Scenes::kOneArgumentCleanup)) != 0)
-	{
-		LOG("SceneMap: the scene step is not a one-argument cdecl with a single caller");
-		return nullptr;
-	}
-
-	return steps.front();
+	out.at = at;
+	out.address = ImageScanner::ReadDword(function + at + Scenes::kStoreAddressAt);
+	out.value = ImageScanner::ReadDword(function + at + Scenes::kStoreValueAt);
+	return ImageScanner::InData(out.address);
 }
 
-bool ReadRequest(const uint8_t* at, SceneAddresses& out)
+bool ReadTitleRun(const uint8_t* function, size_t length, size_t at, Store run[Scenes::kTitleStores])
 {
-	if (at[0] != Scenes::kPushByte ||
-		std::memcmp(at + Scenes::kMovEcxEaxAt, Scenes::kMovEcxEax, sizeof(Scenes::kMovEcxEax)) != 0)
+	for (size_t i = 0; i < Scenes::kTitleStores; ++i)
 	{
-		return false;
+		if (!ReadStore(function, length, at + i * Scenes::kStoreLength, run[i]))
+			return false;
 	}
 
-	const uint8_t* const getter = ImageScanner::CallTargetOf(at + Scenes::kGetterCallAt);
-	uint8_t* const request = ImageScanner::CallTargetOf(at + Scenes::kRequestCallAt);
-	const uintptr_t manager = getter ? ImageScanner::GetterValue(getter) : 0;
-
-	if (manager == 0 || request == nullptr || !ImageScanner::ReturnsWith(request, Scenes::kRequestStackBytes))
+	if (run[0].value != 0 || run[1].value != 0 || run[2].value != 0 || run[3].value == 0)
 		return false;
 
-	out.manager = manager;
-	out.request = request;
-	out.titleFlag = static_cast<int8_t>(at[1]);
+	return run[1].address == run[0].address + sizeof(uint32_t) &&
+		run[2].address == run[3].address + sizeof(uint32_t);
+}
+
+uintptr_t VoteForEntering(uintptr_t sceneId)
+{
+	uint8_t pattern[Scenes::kStoreAddressAt + sizeof(uint32_t)] = { Scenes::kStoreGlobal[0], Scenes::kStoreGlobal[1] };
+	const auto address = static_cast<uint32_t>(sceneId);
+	std::memcpy(pattern + Scenes::kStoreAddressAt, &address, sizeof(address));
+
+	std::map<uintptr_t, int> votes;
+
+	for (const uint8_t* site : ImageScanner::FindBytes(ImageScanner::Code(), pattern, sizeof(pattern)))
+	{
+		for (size_t i = Scenes::kStoreLength; i < Scenes::kEnteringWindow; ++i)
+		{
+			if (!ImageScanner::InCode(site + i, Scenes::kStoreLength))
+				break;
+			if (std::memcmp(site + i, Scenes::kStoreGlobal, sizeof(Scenes::kStoreGlobal)) != 0)
+				continue;
+
+			const uintptr_t candidate = ImageScanner::ReadDword(site + i + Scenes::kStoreAddressAt);
+
+			if (candidate != sceneId && ImageScanner::InData(candidate))
+				++votes[candidate];
+
+			break;
+		}
+	}
+
+	int best = 0;
+	int second = 0;
+	uintptr_t winner = 0;
+
+	for (const std::pair<const uintptr_t, int>& vote : votes)
+	{
+		if (vote.second > best)
+		{
+			second = best;
+			best = vote.second;
+			winner = vote.first;
+			continue;
+		}
+
+		if (vote.second > second)
+			second = vote.second;
+	}
+
+	if (best < Scenes::kLeastEnteringVotes || best < second * Scenes::kEnteringMajority)
+		return 0;
+
+	return winner;
+}
+
+bool ReadTitleFlag(const uint8_t* function, size_t length, const Store& last, uintptr_t entering, int& flag)
+{
+	size_t at = last.at + Scenes::kStoreLength;
+
+	if (at + Scenes::kJumpLength <= length && function[at] == Scenes::kJump)
+	{
+		const int32_t relative = static_cast<int32_t>(ImageScanner::ReadDword(function + at + 1));
+		const uint8_t* const target = function + at + Scenes::kJumpLength + relative;
+
+		if (target < function || target >= function + length)
+			return false;
+
+		at = static_cast<size_t>(target - function);
+	}
+
+	Store store;
+
+	if (!ReadStore(function, length, at, store) || store.address != entering)
+		return false;
+
+	flag = static_cast<int>(store.value);
 	return true;
 }
 
-bool RequestWithin(const uint8_t* from, const uint8_t* end, SceneAddresses& out)
+void ResolveTitle()
 {
-	for (const uint8_t* at = from; at + Scenes::kRequestSequenceLength <= end && at < from + Scenes::kRequestWindow; ++at)
-	{
-		if (ReadRequest(at, out))
-			return true;
-	}
-
-	return false;
-}
-
-bool RequestIn(const uint8_t* function, const std::vector<uint8_t*>& strings, SceneAddresses& out)
-{
-	const size_t length = ImageScanner::FunctionLength(function);
-
-	for (const uint8_t* text : strings)
-	{
-		const uint8_t* const after = ImageScanner::AfterPushOf(function, length, text);
-
-		if (after != nullptr && RequestWithin(after, function + length, out))
-			return true;
-	}
-
-	return false;
-}
-
-void ResolveRequest()
-{
-	const std::vector<uint8_t*> strings = ImageScanner::FindString(Scenes::kReturnTitleAnchor);
+	int matches = 0;
 	SceneAddresses found;
-	int matches = 0;
 
-	for (uint8_t* function : ImageScanner::FunctionsReferencing(strings))
-		matches += RequestIn(function, strings, found) ? 1 : 0;
-
-	if (matches != 1)
+	for (uint8_t* function : ImageScanner::FunctionsReferencing(ImageScanner::FindString(Scenes::kReturnTitleAnchor)))
 	{
-		LOG("SceneMap: a scene request follows ReturnTitle in %d function(s), expected exactly one", matches);
-		return;
-	}
+		const size_t length = ImageScanner::FunctionLength(function);
 
-	g_addresses.manager = found.manager;
-	g_addresses.request = found.request;
-	g_addresses.titleFlag = found.titleFlag;
-}
-
-uintptr_t ResolveEntering(const uint8_t* request)
-{
-	std::vector<uintptr_t> globals;
-
-	for (uint8_t* target : ImageScanner::CallTargets(request))
-	{
-		if (!ImageScanner::InCode(target, Scenes::kEnteringSetterLength) ||
-			std::memcmp(target, Scenes::kEnteringSetterHead, sizeof(Scenes::kEnteringSetterHead)) != 0 ||
-			std::memcmp(target + Scenes::kEnteringSetterTailAt, Scenes::kEnteringSetterTail,
-				sizeof(Scenes::kEnteringSetterTail)) != 0)
+		for (size_t at = 0; at + Scenes::kTitleStores * Scenes::kStoreLength <= length; ++at)
 		{
-			continue;
+			Store run[Scenes::kTitleStores];
+
+			if (!ReadTitleRun(function, length, at, run))
+				continue;
+
+			const uintptr_t entering = VoteForEntering(run[3].address);
+			int flag = 0;
+
+			if (entering == 0 || !ReadTitleFlag(function, length, run[3], entering, flag))
+				continue;
+
+			found.sceneId = run[3].address;
+			found.sceneReturn = run[2].address;
+			found.battleClear = run[0].address;
+			found.manager = run[3].address - Scenes::kSceneId;
+			found.entering = entering;
+			found.titleScene = static_cast<int>(run[3].value);
+			found.titleFlag = flag;
+			++matches;
 		}
-
-		globals.push_back(ImageScanner::ReadDword(target + sizeof(Scenes::kEnteringSetterHead)));
-	}
-
-	if (globals.size() == 1 && ImageScanner::InData(globals.front()))
-		return globals.front();
-
-	LOG("SceneMap: the scene entry flag has %u candidate(s), expected exactly one", static_cast<unsigned>(globals.size()));
-	return 0;
-}
-
-bool SetsSceneId(const uint8_t* setter)
-{
-	const size_t length = (std::min)(ImageScanner::FunctionLength(setter), Scenes::kSceneSetterWindow);
-
-	return length != 0 && ImageScanner::Contains(setter, length, Scenes::kSceneStore, sizeof(Scenes::kSceneStore));
-}
-
-int ResolveTitleScene(const uint8_t* request)
-{
-	const size_t length = ImageScanner::FunctionLength(request);
-	std::vector<int> scenes;
-
-	for (size_t i = 0; i + Scenes::kSceneSetSequenceLength <= length; ++i)
-	{
-		if (request[i] != Scenes::kPushByte ||
-			std::memcmp(request + i + Scenes::kLoadThisAt, Scenes::kLoadThis, sizeof(Scenes::kLoadThis)) != 0)
-		{
-			continue;
-		}
-
-		const uint8_t* const setter = ImageScanner::CallTargetOf(request + i + Scenes::kSceneSetCallAt);
-
-		if (setter != nullptr && SetsSceneId(setter))
-			scenes.push_back(static_cast<int8_t>(request[i + 1]));
-	}
-
-	if (scenes.size() == 1)
-		return scenes.front();
-
-	LOG("SceneMap: the title scene has %u candidate(s), expected exactly one", static_cast<unsigned>(scenes.size()));
-	return -1;
-}
-
-bool ReadCountdown(const uint8_t* at, uintptr_t& object, uintptr_t& offset)
-{
-	if (!ImageScanner::InCode(at, Scenes::kCountdownSequenceLength) ||
-		at[Scenes::kCountdownLimitAt] != Scenes::kCountdownLimit || at[Scenes::kJumpAboveAt] != Scenes::kJumpAbove ||
-		at[Scenes::kJumpShortAt] != Scenes::kJumpShort || at[Scenes::kLoadEcxAt] != Scenes::kLoadEcx ||
-		at[Scenes::kCountdownCallAt] != Scenes::kCall)
-	{
-		return false;
-	}
-
-	object = ImageScanner::ReadDword(at + Scenes::kCountdownObjectAt);
-	offset = ImageScanner::ReadDword(at + Scenes::kCountdownOffsetAt);
-	return ImageScanner::InData(object);
-}
-
-void ResolveReplayCountdown()
-{
-	uintptr_t object = 0;
-	uintptr_t offset = 0;
-	int matches = 0;
-
-	for (const uint8_t* at : ImageScanner::FindBytes(ImageScanner::Code(), Scenes::kCountdownCompare,
-		sizeof(Scenes::kCountdownCompare)))
-	{
-		uintptr_t candidateObject = 0;
-		uintptr_t candidateOffset = 0;
-
-		if (!ReadCountdown(at, candidateObject, candidateOffset))
-			continue;
-
-		object = candidateObject;
-		offset = candidateOffset;
-		++matches;
 	}
 
 	if (matches != 1)
 	{
-		LOG("SceneMap: the replay check countdown has %d candidate(s), expected exactly one", matches);
+		LOG("SceneMap: the way back to the title was found %d time(s), expected exactly one", matches);
 		return;
 	}
 
-	g_addresses.replayChecker = object;
-	g_addresses.replayCountdown = offset;
+	g_addresses = found;
+}
+
+size_t JumpTableCases(uintptr_t table)
+{
+	size_t cases = 0;
+
+	while (cases < Scenes::kMostSceneCases)
+	{
+		const auto slot = reinterpret_cast<const uint8_t*>(table + cases * sizeof(uint32_t));
+
+		if (!ImageScanner::InData(reinterpret_cast<uintptr_t>(slot)) &&
+			!ImageScanner::InCode(slot, sizeof(uint32_t)))
+		{
+			break;
+		}
+
+		const auto target = reinterpret_cast<const uint8_t*>(ImageScanner::ReadDword(slot));
+
+		if (!ImageScanner::InCode(target, 1))
+			break;
+
+		++cases;
+	}
+
+	return cases;
+}
+
+bool SwitchesOverScenes(const uint8_t* function, size_t length)
+{
+	for (size_t i = 0; i + Scenes::kJumpTableLength <= length; ++i)
+	{
+		if (std::memcmp(function + i, Scenes::kJumpTable, sizeof(Scenes::kJumpTable)) != 0)
+			continue;
+
+		const uintptr_t table = ImageScanner::ReadDword(function + i + Scenes::kJumpTableAddressAt);
+
+		if (JumpTableCases(table) >= Scenes::kLeastSceneCases)
+			return true;
+	}
+
+	return false;
+}
+
+uint8_t* ResolveStep(uintptr_t sceneId)
+{
+	if (sceneId == 0)
+		return nullptr;
+
+	std::vector<uint8_t*> matches;
+
+	for (uint8_t* function :
+		ImageScanner::FunctionsReferencing({ reinterpret_cast<uint8_t*>(sceneId) }))
+	{
+		const size_t length = ImageScanner::FunctionLength(function);
+
+		if (length != 0 && SwitchesOverScenes(function, length))
+			matches.push_back(function);
+	}
+
+	if (matches.size() == 1)
+		return matches.front();
+
+	LOG("SceneMap: the scene step has %u candidate(s), expected exactly one", static_cast<unsigned>(matches.size()));
+	return nullptr;
 }
 
 }
@@ -214,26 +238,15 @@ bool SceneMap::Initialize()
 	if (!ImageScanner::Initialize())
 		return false;
 
-	g_addresses.step = ResolveStep();
-	ResolveRequest();
-	ResolveReplayCountdown();
-
-	if (g_addresses.request != nullptr)
-	{
-		g_addresses.entering = ResolveEntering(g_addresses.request);
-		g_addresses.titleScene = ResolveTitleScene(g_addresses.request);
-	}
+	ResolveTitle();
+	g_addresses.step = ResolveStep(g_addresses.sceneId);
 
 	Anchors::Record("Scene step", reinterpret_cast<uintptr_t>(g_addresses.step), "restart the game");
-	Anchors::Record("Back to the title", reinterpret_cast<uintptr_t>(g_addresses.request), "restart the game");
 	Anchors::Record("Scene manager", g_addresses.manager, "the scene this launch started on");
 	Anchors::Record("Scene entry flag", g_addresses.entering, "restart the game");
-	Anchors::Record("Replay check", g_addresses.replayChecker, "the loading screen after a restart");
 
-	LOG("SceneMap: the title is scene %d, reached with flag %d; replay check countdown at +0x%X",
-		g_addresses.titleScene, g_addresses.titleFlag, static_cast<unsigned>(g_addresses.replayCountdown));
-	return g_addresses.step != nullptr && g_addresses.request != nullptr && g_addresses.entering != 0 &&
-		g_addresses.titleScene >= 0 && g_addresses.replayChecker != 0;
+	LOG("SceneMap: the title is scene %d, reached with flag %d", g_addresses.titleScene, g_addresses.titleFlag);
+	return g_addresses.step != nullptr && g_addresses.entering != 0;
 }
 
 const SceneAddresses& SceneMap::Addresses()

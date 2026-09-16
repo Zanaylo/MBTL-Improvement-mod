@@ -9,6 +9,7 @@
 #include "Stages/GameStages.h"
 #include "Stages/HiddenStages.h"
 #include "Stages/StageArchive.h"
+#include "Stages/StageCardArt.h"
 #include "Stages/StageLibrary.h"
 #include "Stages/StageNames.h"
 #include "Stages/StagePicker.h"
@@ -227,6 +228,8 @@ bool CopyFromSource(StageArchive::Source& source, Job& job, FbGameFolder::Game g
 		SetStatus("No file in %s could be read.", job.stage.c_str());
 		return false;
 	}
+
+	StageCardArt::Apply(game, job.name, target);
 
 	std::string list;
 	source.BgList(list);

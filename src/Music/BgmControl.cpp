@@ -17,7 +17,7 @@
 
 namespace {
 
-using PlayBgm_t = int(__cdecl*)(int);
+using PlayBgm_t = int(__fastcall*)(int);
 using BgmCommand_t = void(__cdecl*)();
 
 enum Playback
@@ -290,7 +290,7 @@ void AdoptQueued()
 	Adopt(TakePending());
 }
 
-int __cdecl HookedPlayBgm(int id)
+int __fastcall HookedPlayBgm(int id)
 {
 	InterlockedIncrement(&g_calls);
 	NoteGameThread();

@@ -10,6 +10,7 @@
 #include "Hooks/ImageScanner.h"
 #include "Training/GameState.h"
 
+#include <algorithm>
 #include <cstring>
 #include <vector>
 
@@ -23,48 +24,49 @@ const char* g_status = "does not work in this game version";
 
 uintptr_t ResolveGlobal(const uint8_t* native)
 {
+	const size_t length = ImageScanner::FunctionLength(native);
 	std::vector<uintptr_t> globals;
 
-	for (uint8_t* target : ImageScanner::CallTargets(native))
+	for (size_t i = 0; i + sizeof(Cockpit::kLoadEcxGlobal) + sizeof(uint32_t) <= length; ++i)
 	{
-		const uintptr_t global = ImageScanner::MemoryGetterValue(target);
+		if (std::memcmp(native + i, Cockpit::kLoadEcxGlobal, sizeof(Cockpit::kLoadEcxGlobal)) != 0)
+			continue;
 
-		if (global != 0)
+		const uintptr_t global = ImageScanner::ReadDword(native + i + sizeof(Cockpit::kLoadEcxGlobal));
+
+		if (ImageScanner::InData(global) && std::find(globals.begin(), globals.end(), global) == globals.end())
 			globals.push_back(global);
 	}
 
 	if (globals.size() == 1)
 		return globals.front();
 
-	LOG("BattleHud: the cockpit getter has %u candidate(s), expected exactly one", static_cast<unsigned>(globals.size()));
+	LOG("BattleHud: the cockpit object has %u candidate(s), expected exactly one", static_cast<unsigned>(globals.size()));
 	return 0;
 }
 
 uintptr_t ResolveViewOffset(const uint8_t* native)
 {
+	const size_t length = ImageScanner::FunctionLength(native);
 	std::vector<uintptr_t> offsets;
 
-	for (uint8_t* target : ImageScanner::CallTargets(native))
+	for (size_t i = 0; i + Cockpit::kHideStoreLength <= length; ++i)
 	{
-		if (!ImageScanner::InCode(target, Cockpit::kSetterWindow))
+		if (std::memcmp(native + i, Cockpit::kHideStore, sizeof(Cockpit::kHideStore)) != 0)
+			continue;
+		if (ImageScanner::ReadDword(native + i + Cockpit::kHideValueAt) != Cockpit::kViewHidden)
 			continue;
 
-		const size_t length = ImageScanner::FunctionLength(target);
+		const uintptr_t offset = native[i + Cockpit::kHideOffsetAt];
 
-		for (size_t i = 0; i + sizeof(Cockpit::kSetterStore) < length && i < Cockpit::kSetterWindow; ++i)
-		{
-			if (std::memcmp(target + i, Cockpit::kSetterStore, sizeof(Cockpit::kSetterStore)) != 0)
-				continue;
-
-			offsets.push_back(target[i + sizeof(Cockpit::kSetterStore)]);
-			break;
-		}
+		if (std::find(offsets.begin(), offsets.end(), offset) == offsets.end())
+			offsets.push_back(offset);
 	}
 
 	if (offsets.size() == 1)
 		return offsets.front();
 
-	LOG("BattleHud: the cockpit view setter has %u candidate(s), expected exactly one",
+	LOG("BattleHud: the cockpit view offset has %u candidate(s), expected exactly one",
 		static_cast<unsigned>(offsets.size()));
 	return 0;
 }

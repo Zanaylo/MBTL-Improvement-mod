@@ -19,8 +19,7 @@ constexpr int kTitleFrames = 900;
 constexpr LONG kNoScene = -1;
 constexpr uint32_t kEntering = 1;
 
-using SceneStep_t = int(__cdecl*)(int);
-using SceneRequest_t = void(__fastcall*)(void*, void*, int);
+using SceneStep_t = int(__fastcall*)(int);
 
 SceneStep_t oSceneStep = nullptr;
 
@@ -37,16 +36,13 @@ void RunTitle(const SceneAddresses& scenes)
 	if (InterlockedExchange(&g_titleQueued, 0) == 0)
 		return;
 
-	reinterpret_cast<SceneRequest_t>(scenes.request)(reinterpret_cast<void*>(scenes.manager), nullptr, scenes.titleFlag);
+	*reinterpret_cast<uint32_t*>(scenes.battleClear) = 0;
+	*reinterpret_cast<uint32_t*>(scenes.battleClear + sizeof(uint32_t)) = 0;
+	*reinterpret_cast<uint32_t*>(scenes.sceneReturn) = 0;
+	*reinterpret_cast<uint32_t*>(scenes.sceneId) = static_cast<uint32_t>(scenes.titleScene);
+	*reinterpret_cast<uint32_t*>(scenes.entering) = static_cast<uint32_t>(scenes.titleFlag);
+
 	LOG("GameRestart: the game was sent back to the title");
-}
-
-void ResetReplayCountdown(const SceneAddresses& scenes)
-{
-	uint32_t* const countdown = reinterpret_cast<uint32_t*>(scenes.replayChecker + scenes.replayCountdown);
-
-	LOG("GameRestart: the replay check countdown stood at %u, set back to 0", *countdown);
-	*countdown = 0;
 }
 
 void RunEnter(const SceneAddresses& scenes)
@@ -56,14 +52,13 @@ void RunEnter(const SceneAddresses& scenes)
 	if (scene == kNoScene)
 		return;
 
-	ResetReplayCountdown(scenes);
-	*reinterpret_cast<uint32_t*>(scenes.manager + GameOffsets::Scenes::kSceneId) = static_cast<uint32_t>(scene);
+	*reinterpret_cast<uint32_t*>(scenes.sceneId) = static_cast<uint32_t>(scene);
 	*reinterpret_cast<uint32_t*>(scenes.entering) = kEntering;
 
 	LOG("GameRestart: the game entered scene %ld", static_cast<long>(scene));
 }
 
-int __cdecl HookedSceneStep(int running)
+int __fastcall HookedSceneStep(int running)
 {
 	if (InterlockedIncrement(&g_steps) == 1)
 		LOG("GameRestart: the scene step runs");

@@ -246,10 +246,19 @@
     <ClCompile Include="src\Game\Anchors.cpp">
       <Filter>Game</Filter>
     </ClCompile>
+    <ClCompile Include="src\Game\AssertSites.cpp">
+      <Filter>Game</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Game\CharacterIndexGuard.cpp">
+      <Filter>Game</Filter>
+    </ClCompile>
     <ClCompile Include="src\Game\FileCache.cpp">
       <Filter>Game</Filter>
     </ClCompile>
     <ClCompile Include="src\Game\GameAssets.cpp">
+      <Filter>Game</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Game\GameAsserts.cpp">
       <Filter>Game</Filter>
     </ClCompile>
     <ClCompile Include="src\Game\GameRestart.cpp">
@@ -532,6 +541,9 @@
       <Filter>Stages</Filter>
     </ClCompile>
     <ClCompile Include="src\Stages\StageBloom.cpp">
+      <Filter>Stages</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Stages\StageCardArt.cpp">
       <Filter>Stages</Filter>
     </ClCompile>
     <ClCompile Include="src\Stages\StageCards.cpp">
@@ -854,6 +866,12 @@
     <ClInclude Include="src\Game\Anchors.h">
       <Filter>Game</Filter>
     </ClInclude>
+    <ClInclude Include="src\Game\AssertSites.h">
+      <Filter>Game</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Game\CharacterIndexGuard.h">
+      <Filter>Game</Filter>
+    </ClInclude>
     <ClInclude Include="src\Game\FileCache.h">
       <Filter>Game</Filter>
     </ClInclude>
@@ -861,6 +879,9 @@
       <Filter>Game</Filter>
     </ClInclude>
     <ClInclude Include="src\Game\GameAssets.h">
+      <Filter>Game</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Game\GameAsserts.h">
       <Filter>Game</Filter>
     </ClInclude>
     <ClInclude Include="src\Game\GameOffsets.h">
@@ -1152,6 +1173,9 @@
       <Filter>Stages</Filter>
     </ClInclude>
     <ClInclude Include="src\Stages\StageBloom.h">
+      <Filter>Stages</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Stages\StageCardArt.h">
       <Filter>Stages</Filter>
     </ClInclude>
     <ClInclude Include="src\Stages\StageCards.h">

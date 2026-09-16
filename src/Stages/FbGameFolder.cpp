@@ -76,3 +76,20 @@ const char* FbGameFolder::Tag(Game game)
 		return "";
 	}
 }
+
+const char* FbGameFolder::Short(Game game)
+{
+	switch (game)
+	{
+	case Game_UNI2:
+		return "UNI2";
+	case Game_UNI:
+		return "UNICLR";
+	case Game_UNIEL:
+		return "UNIEL";
+	case Game_DFCI:
+		return "DFCI";
+	default:
+		return "Custom";
+	}
+}

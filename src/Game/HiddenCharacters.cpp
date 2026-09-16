@@ -9,6 +9,7 @@
 #include "Hooks/ImageScanner.h"
 #include "Training/GameState.h"
 
+#include <algorithm>
 #include <cstdio>
 #include <cstring>
 #include <vector>
@@ -40,27 +41,9 @@ int g_cellCount = 0;
 
 char g_status[128] = "nothing unlocked";
 
-uintptr_t GetterAfter(const uint8_t* function, size_t length, size_t from)
-{
-	for (size_t k = from; k + 5 <= length && k < from + Roster::kGetterWindow; ++k)
-	{
-		if (function[k] != Roster::kCall)
-			continue;
-
-		const int32_t relative = static_cast<int32_t>(ImageScanner::ReadDword(function + k + 1));
-		const uintptr_t value = ImageScanner::GetterValue(function + k + 5 + relative);
-
-		if (value != 0)
-			return value;
-	}
-
-	return 0;
-}
-
 uintptr_t ResolveTable()
 {
-	const std::vector<uint8_t*> strings = ImageScanner::FindString(Roster::kTableAnchor);
-	const std::vector<uint8_t*> loaders = ImageScanner::FunctionsReferencing(strings);
+	const std::vector<uint8_t*> loaders = ImageScanner::FunctionsReferencing(ImageScanner::FindString(Roster::kTableAnchor));
 
 	if (loaders.size() != 1)
 	{
@@ -69,41 +52,31 @@ uintptr_t ResolveTable()
 		return 0;
 	}
 
-	const uint8_t* const loader = loaders.front();
-	const size_t length = ImageScanner::FunctionLength(loader);
+	std::vector<uintptr_t> objects;
 
-	for (uint8_t* text : strings)
+	for (uint8_t* site : ImageScanner::CallersOf(loaders.front()))
 	{
-		const uint8_t* const after = ImageScanner::AfterPushOf(loader, length, text);
+		for (size_t i = 1; i <= Roster::kThisWindow; ++i)
+		{
+			const uint8_t* const at = site - i;
 
-		if (after != nullptr)
-			return GetterAfter(loader, length, static_cast<size_t>(after - loader));
+			if (!ImageScanner::InCode(at, 1 + sizeof(uint32_t)) || at[0] != Roster::kLoadEcx)
+				continue;
+
+			const uintptr_t object = ImageScanner::ReadDword(at + 1);
+
+			if (ImageScanner::InData(object) && std::find(objects.begin(), objects.end(), object) == objects.end())
+				objects.push_back(object);
+
+			break;
+		}
 	}
 
-	return 0;
-}
+	if (objects.size() == 1)
+		return objects.front();
 
-uintptr_t NetworkObject(const uint8_t* native, size_t length)
-{
-	for (size_t i = 0; i + 5 <= length; ++i)
-	{
-		if (native[i] == Roster::kLoadEcx && ImageScanner::InData(ImageScanner::ReadDword(native + i + 1)))
-			return ImageScanner::ReadDword(native + i + 1);
-	}
-
-	return 0;
-}
-
-uintptr_t FlagDisplacement(const uint8_t* function)
-{
-	const size_t length = ImageScanner::FunctionLength(function);
-
-	for (size_t i = 0; i + sizeof(Roster::kByteLoad) + 4 <= length; ++i)
-	{
-		if (std::memcmp(function + i, Roster::kByteLoad, sizeof(Roster::kByteLoad)) == 0)
-			return ImageScanner::ReadDword(function + i + sizeof(Roster::kByteLoad));
-	}
-
+	LOG("HiddenCharacters: the character table has %u candidate(s), expected one",
+		static_cast<unsigned>(objects.size()));
 	return 0;
 }
 
@@ -112,28 +85,32 @@ uintptr_t ResolveNetworkFlag()
 	const uint8_t* const native = ImageScanner::NativeFunction(Roster::kNetworkNative);
 
 	if (native == nullptr)
-		return 0;
-
-	const uintptr_t object = NetworkObject(native, ImageScanner::FunctionLength(native));
-
-	for (uint8_t* target : ImageScanner::CallTargets(native))
 	{
-		const size_t length = ImageScanner::FunctionLength(target);
-
-		if (object == 0 || length == 0 || length >= Roster::kShortFunction ||
-			!ImageScanner::Contains(target, length, Roster::kAddEcxNetwork, sizeof(Roster::kAddEcxNetwork)))
-		{
-			continue;
-		}
-
-		const std::vector<uint8_t*> inner = ImageScanner::CallTargets(target);
-		const uintptr_t displacement = inner.empty() ? 0 : FlagDisplacement(inner.front());
-
-		if (displacement != 0)
-			return object + Roster::kNetworkBase + displacement;
+		LOG("HiddenCharacters: the script native %s was not found", Roster::kNetworkNative);
+		return 0;
 	}
 
-	LOG("HiddenCharacters: the network state flag was not found");
+	const size_t length = ImageScanner::FunctionLength(native);
+	std::vector<uintptr_t> flags;
+
+	for (size_t i = 0; i + Roster::kCompareLength <= length; ++i)
+	{
+		if (std::memcmp(native + i, Roster::kCompareByteGlobal, sizeof(Roster::kCompareByteGlobal)) != 0)
+			continue;
+		if (native[i + Roster::kCompareLength - 1] != 0)
+			continue;
+
+		const uintptr_t flag = ImageScanner::ReadDword(native + i + sizeof(Roster::kCompareByteGlobal));
+
+		if (ImageScanner::InData(flag) && std::find(flags.begin(), flags.end(), flag) == flags.end())
+			flags.push_back(flag);
+	}
+
+	if (flags.size() == 1)
+		return flags.front();
+
+	LOG("HiddenCharacters: the network state flag has %u candidate(s), expected one",
+		static_cast<unsigned>(flags.size()));
 	return 0;
 }
 

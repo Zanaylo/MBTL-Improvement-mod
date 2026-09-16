@@ -8,14 +8,16 @@ namespace GameOffsets
 	namespace Files
 	{
 		inline constexpr const char* kReaderOpenAnchor = "./grpdat/Title/title00.pat";
-		inline constexpr uint8_t kReaderOpenPrologue[] = { 0x55, 0x8B, 0xEC, 0xB8 };
+		inline constexpr uint16_t kReaderOpenStackBytes = 0x10;
 
-		inline constexpr const wchar_t* kFileBufferAssert = L"m_pFileBuffer";
-		inline constexpr const wchar_t* kFileSizeAssert = L"m_dwFileSize";
 		inline constexpr size_t kMaxReaderFromMemoryLength = 0x200;
 		inline constexpr uint8_t kReaderTypeOffset = 0x1C;
 		inline constexpr uint32_t kReaderTypeMemory = 2;
+		inline constexpr uint16_t kReaderFromMemoryStackBytes = 0x08;
 
+		inline constexpr uint8_t kStoreDword = 0xC7;
+		inline constexpr uint8_t kCall = 0xE8;
+		inline constexpr size_t kCallLength = 5;
 		inline constexpr size_t kLoadCallWindow = 0x30;
 		inline constexpr int kLeastLoadCallers = 50;
 
@@ -27,31 +29,22 @@ namespace GameOffsets
 		inline constexpr int kOpenShare = 1;
 		inline constexpr int kOpenFlags = 0;
 
-		inline constexpr size_t kCloseCallIndex = 1;
-		inline constexpr uint8_t kLoadEcxFromFrame[] = { 0x8B, 0x8D };
-		inline constexpr size_t kLoadEcxFromFrameLength = 6;
-		inline constexpr uint8_t kFarFrameLea[] = { 0x8D, 0x8D };
-		inline constexpr size_t kFarFrameLeaLength = 6;
-		inline constexpr uint8_t kNearFrameLea[] = { 0x8D, 0x4D };
-		inline constexpr size_t kNearFrameLeaLength = 3;
-		inline constexpr uint8_t kCtorPrologue[] = { 0x55, 0x8B, 0xEC, 0x51, 0x89, 0x4D, 0xFC };
-		inline constexpr int kLeastCtorVotes = 50;
-		inline constexpr size_t kDtorMaxLength = 0x40;
-		inline constexpr size_t kLeastDtorCallers = 100;
+		inline constexpr int kLeastCtorCallers = 100;
 
-		inline constexpr const char* kObjectListAnchor = "%s/%s/object.txt";
-		inline constexpr const char* kStageListAnchor = "./bg/BgList.txt";
+		inline constexpr const char* kTextureExtensionAnchor = ".png";
+		inline constexpr const char* kTextureExtensionCheck = ".tga";
 		inline constexpr const char* kKernelLibrary = "KERNEL32.dll";
 		inline constexpr const char* kFileAttributesImport = "GetFileAttributesA";
-		inline constexpr uint8_t kFileExistsPrologue[] = { 0x55, 0x8B, 0xEC, 0x81, 0xEC };
 	}
 
 	namespace Battle
 	{
 		inline constexpr const char* kStepAnchor = "BattleProc Create";
-		inline constexpr uint8_t kStepPrologue[] = { 0x55, 0x8B, 0xEC, 0x51, 0x8A, 0x45, 0x08, 0x88, 0x45, 0xFC, 0x8A,
-			0x4D, 0x0C, 0x88, 0x4D, 0xFD, 0x8A, 0x55, 0x10, 0x88, 0x55, 0xFE };
-		inline constexpr size_t kStepMaxLength = 0x60;
+		inline constexpr size_t kCallLength = 5;
+		inline constexpr size_t kUpdateWindow = 0x30;
+		inline constexpr int kLeastUpdateVotes = 3;
+		inline constexpr int kSimFlag = 0;
+		inline constexpr int kFirstFlag = 1;
 
 		inline constexpr const char* kTrainingNative = "IsTrainingBattle";
 		inline constexpr uintptr_t kFrameCounter = 0x34;
@@ -61,25 +54,37 @@ namespace GameOffsets
 		inline constexpr int kModeTraining = 3;
 		inline constexpr int kSubModeTraining = 1;
 
-		inline constexpr const wchar_t* kSessionAnchor = L"p_session";
-		inline constexpr size_t kSessionCompareWindow = 0x30;
+		inline constexpr uint8_t kLoadEcxGlobal[] = { 0x8B, 0x0D };
+		inline constexpr uint8_t kTestEcx[] = { 0x85, 0xC9 };
+		inline constexpr size_t kNullTestAt = 6;
+		inline constexpr size_t kNullTestLength = 8;
+		inline constexpr int kLeastSessionTicks = 2;
 
 		inline constexpr const char* kPauseAnchor = "PLAYER %d PAUSE";
-		inline constexpr int kPauseLeastLoads = 20;
+		inline constexpr uint8_t kLoadEcxImmediate = 0xB9;
+		inline constexpr int kPauseLeastLoads = 10;
+		inline constexpr int kPauseMajority = 2;
 		inline constexpr uintptr_t kPauseState = 0x00;
 	}
 
 	namespace Objects
 	{
 		inline constexpr const char* kActivePlayerNative = "IsActivePlayer";
-		inline constexpr uint32_t kLeastStride = 0x800;
-		inline constexpr uint32_t kMostStride = 0x2000;
 		inline constexpr size_t kStrideSearchWindow = 16;
+		inline constexpr size_t kIndexerLength = 33;
+		inline constexpr size_t kIndexedArrays = 2;
+		inline constexpr uint8_t kImul = 0x69;
+		inline constexpr uint8_t kAddEax = 0x05;
+		inline constexpr uint8_t kAddGroup = 0x81;
+		inline constexpr uint8_t kStoreByte = 0xC6;
+		inline constexpr uint8_t kLoadEcxGlobal[] = { 0x8B, 0x0D };
+		inline constexpr size_t kLoadEcxGlobalLength = 6;
+		inline constexpr uint8_t kCountUp[] = { 0xFF, 0x05 };
 		inline constexpr int kCharaSlots = 14;
 
 		inline constexpr uintptr_t kActive = 0x864;
 		inline constexpr uint8_t kEffectSpawnStore[] = { 0x64, 0x08, 0x00, 0x00, 0x01 };
-		inline constexpr size_t kEffectListWindow = 24;
+		inline constexpr size_t kEffectListWindow = 0x20;
 		inline constexpr int kMostEffects = 2000;
 		inline constexpr uintptr_t kEffectPointers = 0x04;
 
@@ -162,62 +167,95 @@ namespace GameOffsets
 		inline constexpr int kSharedType = -1;
 	}
 
+	namespace Asserts
+	{
+		inline constexpr const char* kRuntimeLibrary = "api-ms-win-crt-runtime-l1-1-0.dll";
+		inline constexpr const char* kAssertImport = "_wassert";
+
+		inline constexpr uint8_t kCallSlot[] = { 0xFF, 0x15 };
+		inline constexpr size_t kCallLength = 6;
+		inline constexpr uint8_t kCleanup[] = { 0x83, 0xC4, 0x0C };
+		inline constexpr uint8_t kPushImm = 0x68;
+		inline constexpr size_t kPushLength = 5;
+		inline constexpr uint8_t kPushByte = 0x6A;
+		inline constexpr size_t kPushByteLength = 2;
+		inline constexpr uint32_t kLongestLine = 0xFFFF;
+		inline constexpr size_t kLongestBlock = kPushLength * 3 + kCallLength + sizeof(kCleanup);
+
+		inline constexpr uint8_t kCompareRegister = 0x83;
+		inline constexpr uint8_t kCompareModRmMask = 0xF8;
+		inline constexpr uint8_t kCompareModRm = 0xF8;
+		inline constexpr size_t kCheckLength = 5;
+		inline constexpr size_t kBoundAt = 2;
+		inline constexpr size_t kJumpAt = 3;
+		inline constexpr size_t kJumpDistanceAt = 4;
+		inline constexpr uint8_t kJumpBelow = 0x72;
+		inline constexpr uint8_t kJumpLess = 0x7C;
+
+		inline constexpr uint8_t kMoveEax = 0xB8;
+		inline constexpr size_t kJumpOpcodeAt = 5;
+		inline constexpr uint8_t kJump = 0xE9;
+		inline constexpr size_t kPatchLength = 10;
+		inline constexpr uint8_t kFill = 0xCC;
+		inline constexpr size_t kEntryWindow = 0x60;
+
+		struct CharacterCheck
+		{
+			const wchar_t* file;
+			const wchar_t* expression;
+		};
+
+		inline constexpr const wchar_t* kSaveDataFile = L"\\savedatacs.cpp";
+		inline constexpr const wchar_t* kBattleStatusFile = L"\\networkbattleplayerstatusdata.cpp";
+
+		inline constexpr CharacterCheck kCharacterChecks[] = {
+			{ kSaveDataFile, L"CharID < SAVEDATACS_CHARACTER_NUM" },
+			{ kSaveDataFile, L"CharID < SAVEDATACS_CHARACTER_NUM+1" },
+			{ kBattleStatusFile, L"chara_no < MAX_NETWORK_BATTLE_CHARA_NUM" },
+			{ kBattleStatusFile, L"src_chara_no < MAX_NETWORK_BATTLE_CHARA_NUM" },
+			{ kBattleStatusFile, L"dst_chara_no < MAX_NETWORK_BATTLE_CHARA_NUM" },
+		};
+
+		inline constexpr const wchar_t* kUnlockedColourCheck = L"ColorID < SAVEDATACS_COLOR_NUM";
+		inline constexpr uint16_t kColourGetterStackBytes = 0x08;
+	}
+
 	namespace Scenes
 	{
-		inline constexpr const wchar_t* kStepAnchor = L"!\"Unknown scene!!!\"";
-		inline constexpr uint8_t kOneArgumentCleanup[] = { 0x83, 0xC4, 0x04 };
-		inline constexpr size_t kCallLength = 5;
-		inline constexpr uint8_t kCall = 0xE8;
-
 		inline constexpr const char* kReturnTitleAnchor = "ReturnTitle";
-		inline constexpr size_t kRequestWindow = 0x30;
-		inline constexpr uint8_t kPushByte = 0x6A;
-		inline constexpr size_t kGetterCallAt = 2;
-		inline constexpr size_t kMovEcxEaxAt = 7;
-		inline constexpr uint8_t kMovEcxEax[] = { 0x8B, 0xC8 };
-		inline constexpr size_t kRequestCallAt = 9;
-		inline constexpr size_t kRequestSequenceLength = 14;
-		inline constexpr uint16_t kRequestStackBytes = 4;
 
-		inline constexpr uint8_t kEnteringSetterHead[] = { 0x55, 0x8B, 0xEC, 0x8B, 0x45, 0x08, 0xA3 };
-		inline constexpr size_t kEnteringSetterTailAt = 11;
-		inline constexpr uint8_t kEnteringSetterTail[] = { 0x5D, 0xC3 };
-		inline constexpr size_t kEnteringSetterLength = 13;
+		inline constexpr uint8_t kStoreGlobal[] = { 0xC7, 0x05 };
+		inline constexpr size_t kStoreLength = 10;
+		inline constexpr size_t kStoreAddressAt = 2;
+		inline constexpr size_t kStoreValueAt = 6;
+		inline constexpr size_t kTitleStores = 4;
+		inline constexpr uint8_t kJump = 0xE9;
+		inline constexpr size_t kJumpLength = 5;
 
-		inline constexpr size_t kLoadThisAt = 2;
-		inline constexpr uint8_t kLoadThis[] = { 0x8B, 0x4D, 0xFC };
-		inline constexpr size_t kSceneSetCallAt = 5;
-		inline constexpr size_t kSceneSetSequenceLength = 10;
-		inline constexpr size_t kSceneSetterWindow = 0x20;
-		inline constexpr uint8_t kSceneStore[] = { 0x8B, 0x4D, 0x08, 0x89, 0x48, 0x08 };
+		inline constexpr size_t kEnteringWindow = 0x40;
+		inline constexpr int kLeastEnteringVotes = 32;
+		inline constexpr int kEnteringMajority = 4;
 
-		inline constexpr uint8_t kCountdownCompare[] = { 0x83, 0xB8 };
-		inline constexpr size_t kCountdownOffsetAt = 2;
-		inline constexpr size_t kCountdownLimitAt = 6;
-		inline constexpr uint8_t kCountdownLimit = 0x1E;
-		inline constexpr size_t kJumpAboveAt = 7;
-		inline constexpr uint8_t kJumpAbove = 0x73;
-		inline constexpr size_t kJumpShortAt = 9;
-		inline constexpr uint8_t kJumpShort = 0xEB;
-		inline constexpr size_t kLoadEcxAt = 11;
-		inline constexpr uint8_t kLoadEcx = 0xB9;
-		inline constexpr size_t kCountdownObjectAt = 12;
-		inline constexpr size_t kCountdownCallAt = 16;
-		inline constexpr size_t kCountdownSequenceLength = 17;
+		inline constexpr uint8_t kJumpTable[] = { 0xFF, 0x24 };
+		inline constexpr size_t kJumpTableAddressAt = 3;
+		inline constexpr size_t kJumpTableLength = 7;
+		inline constexpr size_t kLeastSceneCases = 40;
+		inline constexpr size_t kMostSceneCases = 300;
 
 		inline constexpr uintptr_t kSceneId = 0x08;
 	}
 
 	namespace Draw
 	{
-		inline constexpr uint8_t kTwoArgumentCleanup[] = { 0x83, 0xC4, 0x08 };
-		inline constexpr uint8_t kThreeArgumentCleanup[] = { 0x83, 0xC4, 0x0C };
-		inline constexpr uint8_t kTypeTwoCompare[] = { 0xFF, 0xD2, 0x83, 0xF8, 0x02 };
-		inline constexpr uint8_t kMovzx[] = { 0x0F, 0xB6 };
-		inline constexpr size_t kActiveDisplacementAt = 3;
+		inline constexpr uint8_t kCallSlot = 0xFF;
+		inline constexpr uint8_t kCallSlotDigit = 2;
+		inline constexpr size_t kTypeCallLength = 3;
+		inline constexpr size_t kTypeCompareWindow = 12;
+		inline constexpr uint8_t kCompareEax[] = { 0x83, 0xF8 };
+		inline constexpr uint8_t kCompareByte = 0x80;
+		inline constexpr uint8_t kCompareDigit = 7;
+		inline constexpr size_t kActiveTestLength = 7;
 		inline constexpr uint8_t kActiveDisplacement[] = { 0x64, 0x08, 0x00, 0x00 };
-		inline constexpr uint8_t kDrawFlagReturn[] = { 0x0F, 0xB6, 0x4D, 0x0C, 0x85, 0xC9, 0x75, 0x0A, 0xB8, 0x01, 0x00,
-			0x00, 0x00 };
 		inline constexpr size_t kTypeSlot = 2;
 		inline constexpr int kCharacterType = 1;
 		inline constexpr int kEffectType = 2;
@@ -227,7 +265,7 @@ namespace GameOffsets
 	{
 		inline constexpr const char* kBrightnessName = "g_Blightness";
 		inline constexpr size_t kCallLength = 5;
-		inline constexpr uint8_t kFiveArgumentCleanup[] = { 0x83, 0xC4, 0x14 };
+		inline constexpr uint16_t kPassStackBytes = 0;
 		inline constexpr uint8_t kPushImmediate = 0x68;
 		inline constexpr size_t kPushLength = 5;
 		inline constexpr uint8_t kLoadScalar[] = { 0xF3, 0x0F, 0x10, 0x05 };
@@ -258,8 +296,11 @@ namespace GameOffsets
 	namespace Cockpit
 	{
 		inline constexpr const char* kViewNative = "Cockpit_SetView";
-		inline constexpr uint8_t kSetterStore[] = { 0x8B, 0x4D, 0x08, 0x89, 0x48 };
-		inline constexpr size_t kSetterWindow = 0x20;
+		inline constexpr uint8_t kLoadEcxGlobal[] = { 0x8B, 0x0D };
+		inline constexpr uint8_t kHideStore[] = { 0xC7, 0x41 };
+		inline constexpr size_t kHideOffsetAt = 2;
+		inline constexpr size_t kHideValueAt = 3;
+		inline constexpr size_t kHideStoreLength = 7;
 		inline constexpr uint32_t kViewShown = 0;
 		inline constexpr uint32_t kViewHidden = 1;
 	}
@@ -268,13 +309,10 @@ namespace GameOffsets
 	{
 		inline constexpr const char* kTableAnchor = "./System/BtlCharaTbl.txt";
 		inline constexpr const char* kNetworkNative = "GetMvNetworkInfo";
-		inline constexpr uint8_t kCall = 0xE8;
 		inline constexpr uint8_t kLoadEcx = 0xB9;
-		inline constexpr size_t kGetterWindow = 0x40;
-		inline constexpr uint8_t kAddEcxNetwork[] = { 0x81, 0xC1, 0xC8, 0x02, 0x00, 0x00 };
-		inline constexpr uintptr_t kNetworkBase = 0x2C8;
-		inline constexpr uint8_t kByteLoad[] = { 0x8A, 0x80 };
-		inline constexpr size_t kShortFunction = 0x20;
+		inline constexpr size_t kThisWindow = 0x20;
+		inline constexpr uint8_t kCompareByteGlobal[] = { 0x80, 0x3D };
+		inline constexpr size_t kCompareLength = 7;
 
 		inline constexpr uintptr_t kRecordsBegin = 0x04;
 		inline constexpr uintptr_t kRecordsEnd = 0x08;
@@ -343,10 +381,11 @@ namespace GameOffsets
 	namespace Input
 	{
 		inline constexpr const char* kStickNative = "GetStickHold";
-		inline constexpr uint8_t kAddEcx[] = { 0x81, 0xC1 };
-		inline constexpr size_t kAddEcxLength = 6;
-		inline constexpr uint8_t kLeverGetterPrologue[] = { 0x55, 0x8B, 0xEC, 0x51, 0x89, 0x4D, 0xFC, 0x8B, 0x45, 0xFC,
-			0x8B, 0x00, 0x25, 0x00, 0x00, 0x00, 0xFF, 0xC1, 0xE8, 0x18 };
+		inline constexpr uint8_t kLoadLeverByte[] = { 0x0F, 0xB6 };
+		inline constexpr uint8_t kLoadLeverModRmMask = 0xC7;
+		inline constexpr uint8_t kLoadLeverModRm = 0x86;
+		inline constexpr size_t kLoadLeverOffsetAt = 3;
+		inline constexpr size_t kLoadLeverLength = 7;
 		inline constexpr int kLeverShift = 24;
 		inline constexpr uint32_t kButtonMask = 0x00FFFFFF;
 		inline constexpr const char* kXInputLibrary = "xinput1_3.dll";
@@ -355,21 +394,10 @@ namespace GameOffsets
 
 	namespace Meter
 	{
-		inline constexpr const char* kTeamNative = "IsActivePlayer";
-		inline constexpr uint8_t kTeamIndexerHead[] = { 0x55, 0x8B, 0xEC, 0x69, 0x45, 0x08 };
-		inline constexpr size_t kTeamIndexerStrideAt = 6;
-		inline constexpr size_t kTeamIndexerAddAt = 10;
-		inline constexpr uint8_t kTeamIndexerAdd = 0x05;
-		inline constexpr size_t kTeamIndexerBaseAt = 11;
-		inline constexpr size_t kTeamIndexerTailAt = 15;
-		inline constexpr uint8_t kTeamIndexerTail[] = { 0x5D, 0xC3 };
-		inline constexpr size_t kTeamIndexerLength = 17;
 		inline constexpr uintptr_t kTeamSlot = 0x00;
 		inline constexpr uintptr_t kTeamPoint = 0x14;
 
 		inline constexpr const char* kComboNatives[] = { "GetComboInfo", "AddComboCount", "ComboView_Set" };
-		inline constexpr uint8_t kComboStride[] = { 0x69, 0x45, 0x08 };
-		inline constexpr uint8_t kComboOffset[] = { 0x8D, 0x84, 0x01 };
 		inline constexpr uintptr_t kComboRecordSkip = 0x08;
 		inline constexpr uintptr_t kComboActive = 0x08;
 		inline constexpr uintptr_t kComboHits = 0x20;
@@ -445,6 +473,7 @@ namespace GameOffsets
 	namespace Camera
 	{
 		inline constexpr const char* kPositionNative = "GetCameraPosition";
+		inline constexpr uint8_t kLoadEaxGlobal = 0xA1;
 		inline constexpr uintptr_t kElementBytes = 0x18;
 		inline constexpr uintptr_t kElementX = 0x08;
 		inline constexpr uintptr_t kElementY = 0x0C;
@@ -490,20 +519,19 @@ namespace GameOffsets
 		inline constexpr const char* kSecondSheetAnchor = "grpdat/CSel/stage_thumb01";
 		inline constexpr const char* kSecondSheetFile = "grpdat/CSel/stage_thumb01.dds";
 		inline constexpr size_t kStoreWindow = 0x20;
-		inline constexpr uint8_t kStoreSheet[] = { 0x89, 0x84 };
-		inline constexpr size_t kStoreDispAt = 3;
+		inline constexpr uint8_t kCall = 0xE8;
+		inline constexpr size_t kCallLength = 5;
+		inline constexpr uint8_t kLoadEcxName = 0xB9;
+		inline constexpr uint8_t kStoreSheet[] = { 0x89, 0x86 };
+		inline constexpr size_t kStoreSheetDispAt = 2;
+		inline constexpr size_t kStoreSheetLength = 6;
 
-		inline constexpr uint8_t kDivide[] = { 0x99, 0xB9, 0x15, 0x00, 0x00, 0x00, 0xF7, 0xF9 };
-		inline constexpr uint8_t kLoadFramed[] = { 0x8B, 0x45 };
-		inline constexpr uint8_t kStoreQuotient[] = { 0x89, 0x85 };
-		inline constexpr uint8_t kStoreRemainder[] = { 0x89, 0x55 };
-		inline constexpr uint8_t kCompareQuotient[] = { 0x83, 0xBD };
-		inline constexpr uint8_t kClampJump[] = { 0x01, 0x7E, 0x0A };
-		inline constexpr uint8_t kClearQuotient[] = { 0xC7, 0x85 };
-		inline constexpr uint8_t kLoadQuotient[] = { 0x8B, 0x95 };
-		inline constexpr uint8_t kFetchSheet[] = { 0x8B, 0x8C, 0x90 };
-		inline constexpr size_t kSplitLength = 50;
-		inline constexpr size_t kMatchLength = 66;
+		inline constexpr uint8_t kClampAndFetch[] = { 0x33, 0xC0, 0x83, 0xF9, 0x01, 0x0F, 0x4E, 0xC1, 0x8B, 0x84, 0x83 };
+		inline constexpr size_t kFetchDispAt = 11;
+		inline constexpr size_t kClampLength = 15;
+		inline constexpr uint8_t kDivide[] = { 0xB8, 0x31, 0x0C, 0xC3, 0x30, 0xF3, 0x0F, 0x10, 0x4B, 0x4C, 0xF7, 0xEF,
+			0x0F, 0x57, 0xC0, 0xC1, 0xFA, 0x02, 0x8B, 0xCA, 0xC1, 0xE9, 0x1F, 0x03, 0xCA, 0x6B, 0xC1, 0xEB, 0x03, 0xF8 };
+		inline constexpr uint8_t kNop = 0x90;
 
 		inline constexpr int kPerSheet = 21;
 		inline constexpr int kPerRow = 7;
@@ -522,8 +550,12 @@ namespace GameOffsets
 	namespace Tint
 	{
 		inline constexpr const char* kLoaderAnchor = "%s\\%s\\bg.fbx";
-		inline constexpr uint8_t kStoreStage[] = { 0x8B, 0x4D, 0x08, 0x89, 0x0D };
-		inline constexpr size_t kStoreStageDispAt = 5;
+		inline constexpr uint8_t kMoveFromEcx = 0x8B;
+		inline constexpr uint8_t kFromEcxMask = 0xC7;
+		inline constexpr uint8_t kFromEcxBase = 0xC1;
+		inline constexpr uint8_t kStoreGlobal = 0x89;
+		inline constexpr uint8_t kStoreGlobalModRm = 0x05;
+		inline constexpr size_t kEntryWindow = 0x20;
 
 		inline constexpr uintptr_t kTint = 0x3B4;
 		inline constexpr uintptr_t kTimeAt = 0x4;
@@ -558,10 +590,24 @@ namespace GameOffsets
 	namespace Music
 	{
 		inline constexpr const char* kLoaderAnchor = "BGM_%03d";
-		inline constexpr const wchar_t* kPathBuilderAssert = L"g_BgmInfo[bgm_no].BgmType < BGM_INFO::eBgmType_Max";
 		inline constexpr const char* kExtensionAnchor = ".ogg";
 		inline constexpr const char* kSetNative = "BGM_Set";
 		inline constexpr const char* kSetNumberNative = "BGM_SetNum";
+
+		inline constexpr uint8_t kClearTable[] = { 0x68, 0x00, 0x32, 0x00, 0x00, 0x6A, 0x00, 0x68 };
+		inline constexpr size_t kClearTableValueAt = 8;
+		inline constexpr uint8_t kJumpNear = 0xE9;
+		inline constexpr size_t kJumpNearLength = 5;
+		inline constexpr uint8_t kStoreEax = 0xA3;
+		inline constexpr uint8_t kLoadEdx[] = { 0x8B, 0x15 };
+		inline constexpr uint8_t kLoadEcx[] = { 0x8B, 0x0D };
+		inline constexpr uint8_t kStoreConstant[] = { 0xC7, 0x05 };
+		inline constexpr uint8_t kCompareGlobal[] = { 0x83, 0x3D };
+		inline constexpr size_t kOperandAt = 2;
+		inline constexpr size_t kConstantAt = 6;
+		inline constexpr uint8_t kCompareZeroAt = 6;
+		inline constexpr uint32_t kNoTrack = 0xFFFFFFFF;
+		inline constexpr size_t kLeastSetCalls = 2;
 
 		inline constexpr int kSlotCount = 200;
 		inline constexpr uintptr_t kSlotBytes = 0x40;

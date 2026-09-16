@@ -11,6 +11,7 @@
 #include "Training/GameState.h"
 #include "Training/TickListener.h"
 
+#include <algorithm>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -43,15 +44,34 @@ uintptr_t ResolveCurrentStage()
 
 	const uint8_t* const loader = loaders.front();
 	const size_t length = ImageScanner::FunctionLength(loader);
-	std::vector<uintptr_t> globals;
+	uint8_t store = 0;
 
-	for (size_t i = 0; i + Tint::kStoreStageDispAt + sizeof(uint32_t) <= length; ++i)
+	for (size_t i = 0; i + 2 <= length && i < Tint::kEntryWindow; ++i)
 	{
-		if (std::memcmp(loader + i, Tint::kStoreStage, sizeof(Tint::kStoreStage)) == 0)
-			globals.push_back(ImageScanner::ReadDword(loader + i + Tint::kStoreStageDispAt));
+		if (loader[i] != Tint::kMoveFromEcx || (loader[i + 1] & Tint::kFromEcxMask) != Tint::kFromEcxBase)
+			continue;
+
+		store = static_cast<uint8_t>((((loader[i + 1] >> 3) & 7) << 3) | Tint::kStoreGlobalModRm);
+		break;
 	}
 
-	return globals.size() == 1 && ImageScanner::InData(globals.front()) ? globals.front() : 0;
+	if (store == 0)
+		return 0;
+
+	std::vector<uintptr_t> globals;
+
+	for (size_t i = 0; i + 2 + sizeof(uint32_t) <= length; ++i)
+	{
+		if (loader[i] != Tint::kStoreGlobal || loader[i + 1] != store)
+			continue;
+
+		const uintptr_t global = ImageScanner::ReadDword(loader + i + 2);
+
+		if (ImageScanner::InData(global) && std::find(globals.begin(), globals.end(), global) == globals.end())
+			globals.push_back(global);
+	}
+
+	return globals.size() == 1 ? globals.front() : 0;
 }
 
 bool ReadTint(int32_t stage, uint32_t& out)

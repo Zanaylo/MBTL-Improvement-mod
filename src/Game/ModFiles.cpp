@@ -23,7 +23,7 @@ namespace Files = GameOffsets::Files;
 using ReaderOpen_t = int(__fastcall*)(void*, void*, const char*, int, int, int);
 using ReaderFromMemory_t = int(__fastcall*)(void*, void*, const uint8_t*, uint32_t);
 using ReaderLoad_t = int(__fastcall*)(void*, void*, int, int, int);
-using FileExists_t = int(__cdecl*)(const char*);
+using FileExists_t = int(__fastcall*)(const char*);
 
 constexpr DWORD kSettleMs = 500;
 constexpr int kWatchedFolders = 2;
@@ -284,7 +284,7 @@ int __fastcall HookedReaderOpen(void* reader, void* unused, const char* path, in
 	return Serve(reader, data);
 }
 
-int __cdecl HookedFileExists(const char* path)
+int __fastcall HookedFileExists(const char* path)
 {
 	if (!path || !*path)
 		return oFileExists(path);

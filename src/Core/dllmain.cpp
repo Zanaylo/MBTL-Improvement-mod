@@ -10,6 +10,8 @@
 #include "D3D9/D3D9Hooks.h"
 #include "D3D9/D3D9Proxy.h"
 #include "D3D9/DeviceHooks.h"
+#include "Game/CharacterIndexGuard.h"
+#include "Game/GameAsserts.h"
 #include "Game/GameRestart.h"
 #include "Game/HiddenCharacters.h"
 #include "Game/MemoryMap.h"
@@ -190,6 +192,8 @@ void Install()
 	RunStage("palettes", PaletteModule::Install);
 	RunStage("hidden characters", HiddenCharacters::Install);
 	RunStage("save data guard", SaveDataGuard::Install);
+	RunStage("character index guard", CharacterIndexGuard::Install);
+	RunStage("game asserts", GameAsserts::Install);
 	RunStage("game restart", GameRestart::Install);
 	RunStage("update check", Stage_UpdateCheck);
 	RunStage("overlay", Stage_Overlay);

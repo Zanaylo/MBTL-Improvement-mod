@@ -4,7 +4,7 @@
 
 struct BattleAddresses
 {
-	uint8_t* battleStep = nullptr;
+	uint8_t* battleUpdate = nullptr;
 	uintptr_t battleInfo = 0;
 	uintptr_t session = 0;
 	uintptr_t pause = 0;

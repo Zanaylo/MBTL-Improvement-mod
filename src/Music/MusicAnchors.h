@@ -10,7 +10,6 @@ struct MusicAddresses
 	uint8_t* play = nullptr;
 	uint8_t* stop = nullptr;
 	uint8_t* start = nullptr;
-	uint8_t* getCurrent = nullptr;
 	uint8_t* setVolume = nullptr;
 
 	uintptr_t table = 0;

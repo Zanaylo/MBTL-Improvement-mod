@@ -44,8 +44,7 @@ bool GameAssets::IsAvailable()
 {
 	const GameFunctions& functions = MemoryMap::Functions();
 
-	return functions.readerCtor && functions.readerOpen && functions.readerLoad && functions.readerClose &&
-		functions.readerDtor;
+	return functions.readerCtor && functions.readerOpen && functions.readerLoad && functions.readerClose;
 }
 
 bool GameAssets::Read(const char* path, std::vector<uint8_t>& out)
@@ -63,6 +62,5 @@ bool GameAssets::Read(const char* path, std::vector<uint8_t>& out)
 	const bool copied = OpenAndLoad(functions, reader, path) && CopyOut(reader, out);
 
 	reinterpret_cast<ReaderCall_t>(functions.readerClose)(reader, nullptr);
-	reinterpret_cast<ReaderCall_t>(functions.readerDtor)(reader, nullptr);
 	return copied;
 }

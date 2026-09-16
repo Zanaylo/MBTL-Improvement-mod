@@ -15,7 +15,7 @@ namespace {
 
 namespace Bloom = GameOffsets::Bloom;
 
-using BloomPass_t = int(__cdecl*)(int, int, int, int, int);
+using BloomPass_t = int(__fastcall*)(int, int);
 
 BloomPass_t oBloomPass = nullptr;
 
@@ -29,12 +29,12 @@ float Scaled(float value, float scale, float most)
 	return (std::min)(value * scale, most);
 }
 
-int __cdecl HookedBloomPass(int first, int second, int third, int fourth, int fifth)
+int __fastcall HookedBloomPass(int first, int second)
 {
 	const int percent = std::clamp(g_settings.bloomStrength, 0, Bloom::kMostPercent);
 
 	if (percent == Bloom::kFullPercent)
-		return oBloomPass(first, second, third, fourth, fifth);
+		return oBloomPass(first, second);
 
 	const float scale = static_cast<float>(percent) / Bloom::kFullPercent;
 	const float brightness = *g_brightness;
@@ -43,7 +43,7 @@ int __cdecl HookedBloomPass(int first, int second, int third, int fourth, int fi
 	*g_brightness = Scaled(brightness, scale, Bloom::kMostBrightness);
 	*g_alpha = Scaled(alpha, scale, Bloom::kMostAlpha);
 
-	const int result = oBloomPass(first, second, third, fourth, fifth);
+	const int result = oBloomPass(first, second);
 
 	*g_brightness = brightness;
 	*g_alpha = alpha;
@@ -62,10 +62,9 @@ uint8_t* ResolvePass(const std::vector<uint8_t*>& names)
 
 	const std::vector<uint8_t*> sites = ImageScanner::CallersOf(passes.front());
 
-	if (sites.size() != 1 ||
-		std::memcmp(sites.front() + Bloom::kCallLength, Bloom::kFiveArgumentCleanup, sizeof(Bloom::kFiveArgumentCleanup)) != 0)
+	if (sites.size() != 1 || !ImageScanner::ReturnsWith(passes.front(), Bloom::kPassStackBytes))
 	{
-		LOG("StageBloom: the bloom pass is not a five-argument cdecl with a single caller");
+		LOG("StageBloom: the bloom pass does not have a single caller and a register-only call");
 		return nullptr;
 	}
 

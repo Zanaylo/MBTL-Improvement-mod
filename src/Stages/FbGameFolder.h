@@ -15,4 +15,5 @@ namespace FbGameFolder
 
 	const char* Name(Game game);
 	const char* Tag(Game game);
+	const char* Short(Game game);
 }

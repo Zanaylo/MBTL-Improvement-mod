@@ -166,8 +166,11 @@
     <ClCompile Include="src\D3D9\PresentTuning.cpp" />
     <ClCompile Include="src\D3D9\QuadRenderer.cpp" />
     <ClCompile Include="src\Game\Anchors.cpp" />
+    <ClCompile Include="src\Game\AssertSites.cpp" />
+    <ClCompile Include="src\Game\CharacterIndexGuard.cpp" />
     <ClCompile Include="src\Game\FileCache.cpp" />
     <ClCompile Include="src\Game\GameAssets.cpp" />
+    <ClCompile Include="src\Game\GameAsserts.cpp" />
     <ClCompile Include="src\Game\GameRestart.cpp" />
     <ClCompile Include="src\Game\HiddenCharacters.cpp" />
     <ClCompile Include="src\Game\MemoryMap.cpp" />
@@ -262,6 +265,7 @@
     <ClCompile Include="src\Stages\MbtlCipher.cpp" />
     <ClCompile Include="src\Stages\StageArchive.cpp" />
     <ClCompile Include="src\Stages\StageBloom.cpp" />
+    <ClCompile Include="src\Stages\StageCardArt.cpp" />
     <ClCompile Include="src\Stages\StageCards.cpp" />
     <ClCompile Include="src\Stages\StageEntry.cpp" />
     <ClCompile Include="src\Stages\StageImage.cpp" />
@@ -371,9 +375,12 @@
     <ClInclude Include="src\D3D9\PresentTuning.h" />
     <ClInclude Include="src\D3D9\QuadRenderer.h" />
     <ClInclude Include="src\Game\Anchors.h" />
+    <ClInclude Include="src\Game\AssertSites.h" />
+    <ClInclude Include="src\Game\CharacterIndexGuard.h" />
     <ClInclude Include="src\Game\FileCache.h" />
     <ClInclude Include="src\Game\FileOverlay.h" />
     <ClInclude Include="src\Game\GameAssets.h" />
+    <ClInclude Include="src\Game\GameAsserts.h" />
     <ClInclude Include="src\Game\GameOffsets.h" />
     <ClInclude Include="src\Game\GameRestart.h" />
     <ClInclude Include="src\Game\HiddenCharacters.h" />
@@ -471,6 +478,7 @@
     <ClInclude Include="src\Stages\MbtlKey.inc" />
     <ClInclude Include="src\Stages\StageArchive.h" />
     <ClInclude Include="src\Stages\StageBloom.h" />
+    <ClInclude Include="src\Stages\StageCardArt.h" />
     <ClInclude Include="src\Stages\StageCards.h" />
     <ClInclude Include="src\Stages\StageEntry.h" />
     <ClInclude Include="src\Stages\StageImage.h" />

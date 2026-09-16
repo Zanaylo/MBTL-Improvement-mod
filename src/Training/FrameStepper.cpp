@@ -3,6 +3,7 @@
 #include "Core/Profiler.h"
 #include "Core/interfaces.h"
 #include "Core/logger.h"
+#include "Game/GameOffsets.h"
 #include "Hooks/HookManager.h"
 #include "Training/BattleMap.h"
 #include "Training/GameState.h"
@@ -14,11 +15,9 @@
 
 namespace {
 
-using BattleStep_t = int(__cdecl*)(int, int, int);
+using BattleUpdate_t = int(__fastcall*)(uint8_t*);
 
-constexpr int kFlagMask = 0xFF;
-
-BattleStep_t oBattleStep = nullptr;
+BattleUpdate_t oBattleUpdate = nullptr;
 
 bool g_hooked = false;
 bool g_paused = false;
@@ -43,13 +42,13 @@ bool TakeStep()
 	}
 }
 
-int Simulate(int sim, int first, int second)
+int Simulate(uint8_t* flags)
 {
 	int result = 0;
 
 	{
 		Profiler::Scope scope(Profiler::Section_TickGame);
-		result = oBattleStep(sim, first, second);
+		result = oBattleUpdate(flags);
 	}
 
 	for (ITickListener* listener : g_tickListeners)
@@ -59,44 +58,58 @@ int Simulate(int sim, int first, int second)
 	return result;
 }
 
-int Freeze(int first, int second)
+int Freeze(uint8_t* flags)
 {
+	namespace Battle = GameOffsets::Battle;
+
+	const uint8_t sim = flags[Battle::kSimFlag];
+	const uint8_t first = flags[Battle::kFirstFlag];
+
+	flags[Battle::kSimFlag] = 0;
+
+	if (g_settings.replayFrozenFrame)
+		flags[Battle::kFirstFlag] = 0;
+
 	InterlockedIncrement64(&g_suppressed);
-	return oBattleStep(0, g_settings.replayFrozenFrame ? 0 : first, second);
+	const int result = oBattleUpdate(flags);
+
+	flags[Battle::kSimFlag] = sim;
+	flags[Battle::kFirstFlag] = first;
+	return result;
 }
 
-int __cdecl HookedBattleStep(int sim, int first, int second)
+int __fastcall HookedBattleUpdate(uint8_t* flags)
 {
 	InterlockedIncrement64(&g_calls);
 	GameState::NoteBattleStep();
 
-	if ((sim & kFlagMask) == 0)
-		return oBattleStep(sim, first, second);
+	if (flags == nullptr || flags[GameOffsets::Battle::kSimFlag] == 0)
+		return oBattleUpdate(flags);
 
 	if (!g_paused)
-		return Simulate(sim, first, second);
+		return Simulate(flags);
 
 	if (!GameState::AllowsTrainingTools())
 	{
 		FrameStepper::SetPaused(false);
-		return Simulate(sim, first, second);
+		return Simulate(flags);
 	}
 
 	if (GameState::IsGamePaused())
-		return Simulate(sim, first, second);
+		return Simulate(flags);
 
 	if (!TakeStep())
-		return Freeze(first, second);
+		return Freeze(flags);
 
 	InterlockedExchange(&g_stepped, 1);
-	return Simulate(sim, first, second);
+	return Simulate(flags);
 }
 
 }
 
 bool FrameStepper::Initialize()
 {
-	const uint8_t* const target = BattleMap::Addresses().battleStep;
+	const uint8_t* const target = BattleMap::Addresses().battleUpdate;
 
 	if (!target)
 	{
@@ -105,8 +118,8 @@ bool FrameStepper::Initialize()
 		return false;
 	}
 
-	g_hooked = HookManager::CreateHook(const_cast<uint8_t*>(target), reinterpret_cast<void*>(&HookedBattleStep),
-		reinterpret_cast<void**>(&oBattleStep), "BattleStep");
+	g_hooked = HookManager::CreateHook(const_cast<uint8_t*>(target), reinterpret_cast<void*>(&HookedBattleUpdate),
+		reinterpret_cast<void**>(&oBattleUpdate), "BattleUpdate");
 
 	strncpy_s(g_status, g_hooked ? "ready" : "could not start", _TRUNCATE);
 	LOG("FrameStepper: %s", g_status);

@@ -10,3 +10,4 @@
 | `ModFiles` | `LogMissingFiles` | `1` | Log files the game asked for in a modded folder that Mods does not have |
 | `Mod` | `DinputDllWrapper` | empty | Another `dinput8.dll` to chain to instead of the Windows one |
 | `Mod` | `CheckForUpdates` | `1` | Ask GitHub once at start whether a newer release is out |
+| `Compat` | `ShowGameAsserts` | `0` | Show the game's own "Assertion failed" dialogs. At `0` the mod skips them and writes each one to the log |

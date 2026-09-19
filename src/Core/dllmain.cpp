@@ -20,6 +20,7 @@
 #include "Hooks/HookManager.h"
 #include "Hooks/ImageScanner.h"
 #include "Music/MusicModule.h"
+#include "Network/NetworkModule.h"
 #include "Overlay/FrameMeterHud.h"
 #include "Overlay/WindowManager.h"
 #include "Palette/PaletteModule.h"
@@ -188,6 +189,7 @@ void Install()
 	RunStage("stages", StagesModule::Install);
 	RunStage("music", MusicModule::Install);
 	RunStage("training", TrainingModule::Install);
+	RunStage("network", NetworkModule::Install);
 	RunStage("performance", PerformanceModule::Install);
 	RunStage("palettes", PaletteModule::Install);
 	RunStage("hidden characters", HiddenCharacters::Install);
@@ -253,6 +255,7 @@ BOOL APIENTRY DllMain(HMODULE module, DWORD reasonForCall, LPVOID reserved)
 	if (g_secondInstance)
 		return TRUE;
 
+	NetworkModule::Shutdown();
 	HookManager::Shutdown();
 
 	if (g_originalDinput)

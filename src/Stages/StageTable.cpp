@@ -1,6 +1,7 @@
 #include "Stages/StageTable.h"
 
 #include "Core/logger.h"
+#include "Core/utils.h"
 #include "Game/Anchors.h"
 #include "Game/GameOffsets.h"
 #include "Hooks/CodePatch.h"
@@ -131,6 +132,8 @@ private:
 };
 
 bool g_lifted = false;
+uintptr_t g_table = 0;
+uintptr_t g_empty = 0;
 char g_status[224] = "The game's normal 100 stage numbers.";
 
 uint8_t* AsPointer(uintptr_t address)
@@ -552,6 +555,9 @@ bool Apply(const Plan& plan)
 		return false;
 	}
 
+	g_table = reinterpret_cast<uintptr_t>(table);
+	g_empty = reinterpret_cast<uintptr_t>(empty);
+
 	Anchors::Record("Stage table (widened)", reinterpret_cast<uintptr_t>(table));
 	Anchors::Record("Stage list (widened)", reinterpret_cast<uintptr_t>(list));
 	Anchors::Record("Stage bound caves", reinterpret_cast<uintptr_t>(caves));
@@ -571,6 +577,8 @@ bool StageTable::Initialize()
 
 	if (!parser || !FindTables(parser, plan))
 		return Refuse("the stage list reader was not found in this game version");
+
+	g_table = plan.table;
 
 	Anchors::Record("Stage table", plan.table);
 	Anchors::Record("Stage select list", plan.list);
@@ -610,6 +618,19 @@ int StageTable::Numbers()
 int StageTable::ListEntries()
 {
 	return g_lifted ? kWideNumbers : kStockNumbers;
+}
+
+uintptr_t StageTable::RecordAt(int number)
+{
+	if (g_table == 0 || number < 0 || number >= Numbers())
+		return 0;
+
+	uintptr_t record = 0;
+
+	if (!TryRead(g_table + static_cast<uintptr_t>(number) * kSlotBytes, record) || record == g_empty)
+		return 0;
+
+	return record;
 }
 
 const char* StageTable::StatusText()

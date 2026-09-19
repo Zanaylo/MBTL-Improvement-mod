@@ -2,7 +2,9 @@
 
 #include "Core/interfaces.h"
 #include "Core/logger.h"
-#include "Network/SteamNetwork.h"
+#include "Network/ModChannel.h"
+#include "Network/ModHandshake.h"
+#include "Network/NetLink.h"
 #include "Palette/EffectPaint.h"
 #include "Palette/PaletteChoice.h"
 #include "Palette/PaletteControl.h"
@@ -10,27 +12,24 @@
 #include "Palette/PaletteOwner.h"
 #include "Palette/PalettePaint.h"
 
+#include <windows.h>
+
 #include <cstdio>
 #include <cstring>
 #include <memory>
 
 namespace {
 
-constexpr uint32_t kMagic = 0x5054424D;
-constexpr uint16_t kVersion = 2;
-constexpr uint16_t kKindPalette = 1;
+constexpr uint16_t kVersion = 3;
+constexpr DWORD kTtlMs = 20000;
 
-constexpr int kSendDelayFrames = 120;
-constexpr int kResendFrames = 180;
-constexpr int kSends = 3;
+constexpr int kSendDelayFrames = 60;
 constexpr int kSettleFrames = 30;
 
 #pragma pack(push, 1)
 struct Packet
 {
-	uint32_t magic;
-	uint16_t version;
-	uint16_t kind;
+	ModChannel::Header header;
 	int32_t chara;
 	int8_t seat;
 	char name[PaletteFile::kNameLength];
@@ -50,12 +49,11 @@ struct Remote
 
 bool g_inMatch = false;
 int g_frames = 0;
-int g_sent = 0;
+bool g_queued = false;
 
 unsigned g_seenRevision = 0;
 int g_settled = 0;
 unsigned g_sentRevision = 0;
-bool g_everSent = false;
 
 int g_sentCount = 0;
 int g_receivedCount = 0;
@@ -92,6 +90,21 @@ void WornName(int seat, char* out, size_t size)
 		out[length - suffix] = '\0';
 }
 
+const char* PeerText()
+{
+	switch (ModHandshake::GetPeerState())
+	{
+	case ModHandshake::Peer_Waiting:
+		return ", waiting for the opponent's mod";
+	case ModHandshake::Peer_Modded:
+		return "";
+	case ModHandshake::Peer_Unmodded:
+		return ", the opponent has no mod";
+	default:
+		return ", no opponent yet";
+	}
+}
+
 void UpdateStatus()
 {
 	const int own = OwnSide();
@@ -102,15 +115,14 @@ void UpdateStatus()
 	else
 		sprintf_s(seat, "you are P%d", own + 1);
 
-	sprintf_s(g_status, "%s, %s, sent %d, received %d%s", SteamNetwork::IsReady() ? "Steam ready" : "No Steam", seat,
-		g_sentCount, g_receivedCount, SteamNetwork::HasPeer() ? "" : ", no opponent yet");
+	sprintf_s(g_status, "%s, sent %d, received %d%s", seat, g_sentCount, g_receivedCount, PeerText());
 }
 
 void FillPacket(int seat, Packet& packet)
 {
-	packet.magic = kMagic;
-	packet.version = kVersion;
-	packet.kind = kKindPalette;
+	packet.header.magic = ModChannel::kMagic;
+	packet.header.version = kVersion;
+	packet.header.kind = ModChannel::kKindPalette;
 	packet.chara = PaletteOwner::CharaNumber(seat);
 	packet.seat = static_cast<int8_t>(seat);
 
@@ -124,9 +136,6 @@ void FillPacket(int seat, Packet& packet)
 		std::memcpy(packet.pages[sub], page, PaletteFile::kBytes);
 		packet.subMask |= static_cast<uint8_t>(1u << sub);
 	}
-
-	if (packet.subMask == 0)
-		return;
 
 	WornName(seat, packet.name, sizeof(packet.name));
 
@@ -143,15 +152,17 @@ bool SendSeat(int seat)
 		return false;
 
 	const std::unique_ptr<Packet> packet = std::make_unique<Packet>();
+	std::memset(packet.get(), 0, sizeof(Packet));
 	FillPacket(seat, *packet);
 
-	if (packet->subMask == 0 && !g_everSent)
+	char label[24] = {};
+	sprintf_s(label, "palette seat %d", seat);
+
+	if (!ModChannel::SendToPeer(packet.get(), sizeof(Packet), kTtlMs, label))
 		return false;
 
-	if (!SteamNetwork::Send(packet.get(), sizeof(Packet)))
-		return false;
-
-	LOG("PaletteShare: sent '%s' for character %d on p%d", packet->name, packet->chara, PaletteOwner::SideOf(seat) + 1);
+	LOG("PaletteShare: queued '%s' for character %d on p%d", packet->name, packet->chara,
+		PaletteOwner::SideOf(seat) + 1);
 	return true;
 }
 
@@ -162,16 +173,16 @@ void SendOurs()
 	if (!g_settings.sharePalettes || own < 0)
 		return;
 
-	bool sent = false;
+	bool queued = false;
 
 	for (int member = 0; member < PaletteOwner::kMembers; ++member)
-		sent = SendSeat(PaletteOwner::SeatOf(own, member)) || sent;
+		queued = SendSeat(PaletteOwner::SeatOf(own, member)) || queued;
 
-	if (!sent)
+	if (!queued)
 		return;
 
 	g_sentRevision = OwnRevision(own);
-	g_everSent = true;
+	g_queued = true;
 	++g_sentCount;
 }
 
@@ -208,15 +219,18 @@ int SeatForPeer(int claimed)
 	return PaletteOwner::SeatOf(side, PaletteOwner::MemberOf(claimed));
 }
 
-void HandlePacket(const Packet& packet, int size, uint64_t from)
+void HandlePalette(const uint8_t* data, int size, uint64_t from)
 {
-	if (size != static_cast<int>(sizeof(Packet)) || packet.magic != kMagic || packet.version != kVersion ||
-		packet.kind != kKindPalette)
-	{
+	if (size != static_cast<int>(sizeof(Packet)) || !g_settings.showOnlinePalettes)
 		return;
-	}
 
-	if (from == 0 || from != SteamNetwork::GetPeer() || !g_settings.showOnlinePalettes)
+	if (from == 0 || from != NetLink::Peer() || !ModHandshake::HeardFrom(from))
+		return;
+
+	Packet packet = {};
+	std::memcpy(&packet, data, sizeof(packet));
+
+	if (packet.header.version != kVersion)
 		return;
 
 	const int seat = SeatForPeer(packet.seat);
@@ -224,19 +238,8 @@ void HandlePacket(const Packet& packet, int size, uint64_t from)
 	if (seat < 0 || PaletteOwner::SideOf(seat) == OwnSide())
 		return;
 
-	Packet copy = packet;
-	copy.name[PaletteFile::kNameLength - 1] = '\0';
-	PlaceForeign(seat, copy);
-}
-
-void Receive()
-{
-	const std::unique_ptr<Packet> buffer = std::make_unique<Packet>();
-	int size = 0;
-	uint64_t from = 0;
-
-	while (SteamNetwork::Receive(buffer.get(), sizeof(Packet), size, from))
-		HandlePacket(*buffer, size, from);
+	packet.name[PaletteFile::kNameLength - 1] = '\0';
+	PlaceForeign(seat, packet);
 }
 
 void DropStaleForeign()
@@ -271,8 +274,7 @@ void ResetMatch(bool inMatch)
 {
 	g_inMatch = inMatch;
 	g_frames = 0;
-	g_sent = 0;
-	g_everSent = false;
+	g_queued = false;
 	g_sentRevision = 0;
 	g_settled = 0;
 
@@ -280,7 +282,7 @@ void ResetMatch(bool inMatch)
 		ForgetForeign();
 }
 
-void TrackRevision(int own)
+bool Due(int own)
 {
 	const unsigned revision = OwnRevision(own);
 
@@ -288,28 +290,27 @@ void TrackRevision(int own)
 	{
 		g_seenRevision = revision;
 		g_settled = 0;
-		return;
+		return false;
 	}
 
 	if (g_settled < kSettleFrames)
 		++g_settled;
 
-	if (!g_everSent || g_settled != kSettleFrames || revision == g_sentRevision)
-		return;
+	if (g_settled < kSettleFrames || g_frames < kSendDelayFrames)
+		return false;
 
-	g_sent = 0;
-	g_frames = kSendDelayFrames;
+	return !g_queued || revision != g_sentRevision;
 }
 
+}
+
+void PaletteShare::Initialize()
+{
+	ModChannel::Register(ModChannel::kKindPalette, &HandlePalette);
 }
 
 void PaletteShare::OnFrame()
 {
-	if (!SteamNetwork::IsReady())
-		return;
-
-	Receive();
-
 	const bool inMatch = PaletteControl::IsOnline() && PaletteOwner::CharaNumber(0) >= 0;
 
 	if (inMatch != g_inMatch)
@@ -323,19 +324,8 @@ void PaletteShare::OnFrame()
 
 	const int own = OwnSide();
 
-	if (!SteamNetwork::HasPeer() || own < 0)
-	{
-		UpdateStatus();
-		return;
-	}
-
-	TrackRevision(own);
-
-	if (g_sent < kSends && g_frames >= kSendDelayFrames + g_sent * kResendFrames)
-	{
-		++g_sent;
+	if (own >= 0 && NetLink::HasPeer() && Due(own))
 		SendOurs();
-	}
 
 	UpdateStatus();
 }

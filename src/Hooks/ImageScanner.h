@@ -18,6 +18,7 @@ namespace ImageScanner
 	uint8_t* Base();
 	ImageSection Code();
 	ImageSection ReadOnlyData();
+	ImageSection InitialisedData();
 	uint32_t TimeDateStamp();
 
 	bool InCode(const uint8_t* address, size_t length);

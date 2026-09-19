@@ -2,7 +2,6 @@
 
 #include "D3D9/DeviceHooks.h"
 #include "Network/PaletteShare.h"
-#include "Network/SteamNetwork.h"
 #include "Palette/EffectPaint.h"
 #include "Palette/PaletteChoice.h"
 #include "Palette/PaletteControl.h"
@@ -15,7 +14,6 @@ class PaletteListener final : public IDeviceListener
 public:
 	void OnPresent(IDirect3DDevice9*) override
 	{
-		SteamNetwork::OnFrame();
 		PaletteControl::OnFrame();
 		PaletteChoice::OnFrame();
 		PaletteShare::OnFrame();
@@ -30,6 +28,5 @@ PaletteListener g_listener;
 
 void PaletteModule::Install()
 {
-	SteamNetwork::Install();
 	DeviceHooks::AddListener(&g_listener);
 }

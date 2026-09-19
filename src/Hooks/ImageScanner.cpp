@@ -57,6 +57,7 @@ uint8_t* g_base = nullptr;
 ImageSection g_code;
 ImageSection g_rdata;
 ImageSection g_data;
+ImageSection g_initialisedData;
 uint32_t g_timeDateStamp = 0;
 
 using CallPair = std::pair<const uint8_t*, uint8_t*>;
@@ -288,7 +289,10 @@ bool ImageScanner::Initialize()
 		if (std::memcmp(section->Name, ".rdata", 7) == 0)
 			g_rdata = range;
 		if (std::memcmp(section->Name, ".data", 6) == 0)
+		{
 			g_data = range;
+			g_initialisedData = ImageSection{ range.begin, section->SizeOfRawData };
+		}
 	}
 
 	if (!g_code.begin || !g_rdata.begin || !g_data.begin)
@@ -318,6 +322,11 @@ ImageSection ImageScanner::Code()
 ImageSection ImageScanner::ReadOnlyData()
 {
 	return g_rdata;
+}
+
+ImageSection ImageScanner::InitialisedData()
+{
+	return g_initialisedData;
 }
 
 uint32_t ImageScanner::TimeDateStamp()

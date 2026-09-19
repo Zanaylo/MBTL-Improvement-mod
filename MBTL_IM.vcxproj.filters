@@ -333,6 +333,48 @@
     <ClCompile Include="src\Music\UserTracks.cpp">
       <Filter>Music</Filter>
     </ClCompile>
+    <ClCompile Include="src\Network\GgpoLayout.cpp">
+      <Filter>Network</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Network\LobbyWatch.cpp">
+      <Filter>Network</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Network\ModChannel.cpp">
+      <Filter>Network</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Network\ModHandshake.cpp">
+      <Filter>Network</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Network\ModPresence.cpp">
+      <Filter>Network</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Network\NetGate.cpp">
+      <Filter>Network</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Network\NetLink.cpp">
+      <Filter>Network</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Network\NetLog.cpp">
+      <Filter>Network</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Network\NetWorker.cpp">
+      <Filter>Network</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Network\NetplayTick.cpp">
+      <Filter>Network</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Network\NetworkModule.cpp">
+      <Filter>Network</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Network\SteamInterfaces.cpp">
+      <Filter>Network</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Network\SteamLink.cpp">
+      <Filter>Network</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Network\SteamWatch.cpp">
+      <Filter>Network</Filter>
+    </ClCompile>
     <ClCompile Include="src\Network\PaletteShare.cpp">
       <Filter>Network</Filter>
     </ClCompile>
@@ -562,6 +604,9 @@
       <Filter>Stages</Filter>
     </ClCompile>
     <ClCompile Include="src\Stages\StageNames.cpp">
+      <Filter>Stages</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Stages\StageOnline.cpp">
       <Filter>Stages</Filter>
     </ClCompile>
     <ClCompile Include="src\Stages\StageOverlays.cpp">
@@ -959,6 +1004,48 @@
     <ClInclude Include="src\Music\UserTracks.h">
       <Filter>Music</Filter>
     </ClInclude>
+    <ClInclude Include="src\Network\GgpoLayout.h">
+      <Filter>Network</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Network\LobbyWatch.h">
+      <Filter>Network</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Network\ModChannel.h">
+      <Filter>Network</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Network\ModHandshake.h">
+      <Filter>Network</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Network\ModPresence.h">
+      <Filter>Network</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Network\NetGate.h">
+      <Filter>Network</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Network\NetLink.h">
+      <Filter>Network</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Network\NetLog.h">
+      <Filter>Network</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Network\NetWorker.h">
+      <Filter>Network</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Network\NetplayTick.h">
+      <Filter>Network</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Network\NetworkModule.h">
+      <Filter>Network</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Network\SteamInterfaces.h">
+      <Filter>Network</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Network\SteamLink.h">
+      <Filter>Network</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Network\SteamWatch.h">
+      <Filter>Network</Filter>
+    </ClInclude>
     <ClInclude Include="src\Network\PaletteShare.h">
       <Filter>Network</Filter>
     </ClInclude>
@@ -1194,6 +1281,9 @@
       <Filter>Stages</Filter>
     </ClInclude>
     <ClInclude Include="src\Stages\StageNames.h">
+      <Filter>Stages</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Stages\StageOnline.h">
       <Filter>Stages</Filter>
     </ClInclude>
     <ClInclude Include="src\Stages\StageOverlays.h">

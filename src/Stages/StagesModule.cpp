@@ -9,6 +9,7 @@
 #include "Stages/StageCards.h"
 #include "Stages/StageImport.h"
 #include "Stages/StageLibrary.h"
+#include "Stages/StageOnline.h"
 #include "Stages/StageOverlays.h"
 #include "Stages/StagePictures.h"
 #include "Stages/StageThumbs.h"
@@ -21,7 +22,11 @@ namespace {
 class FinishListener : public IDeviceListener
 {
 public:
-	void OnPresent(IDirect3DDevice9*) override { StageImport::Update(); }
+	void OnPresent(IDirect3DDevice9*) override
+	{
+		StageImport::Update();
+		StageOnline::OnFrame();
+	}
 };
 
 FinishListener g_listener;

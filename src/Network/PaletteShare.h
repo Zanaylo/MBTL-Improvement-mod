@@ -2,6 +2,7 @@
 
 namespace PaletteShare
 {
+	void Initialize();
 	void OnFrame();
 
 	const char* GetStatusText();

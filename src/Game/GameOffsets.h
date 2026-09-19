@@ -358,6 +358,43 @@ namespace GameOffsets
 		inline constexpr uintptr_t kMessageIdentityOffsets[] = { 0x10, 0x0C };
 	}
 
+	namespace Ggpo
+	{
+		inline constexpr const char* kBackendTypeName = ".?AVPeer2PeerBackend@@";
+		inline constexpr uintptr_t kTypeDescriptorFromName = 8;
+		inline constexpr uintptr_t kLocatorTypeDescriptor = 12;
+		inline constexpr uintptr_t kLocatorSignature = 0;
+		inline constexpr uintptr_t kLocatorOffset = 4;
+		inline constexpr uintptr_t kVTableFromLocator = 4;
+
+		inline constexpr uintptr_t kPlayerEndpoints = 0xBD8;
+		inline constexpr uintptr_t kSpectatorEndpoints = 0xBDC;
+		inline constexpr uintptr_t kSpectatorCount = 0x4BA5C;
+		inline constexpr uintptr_t kSynchronizing = 0x4BA64;
+		inline constexpr uintptr_t kPlayerCount = 0x4BA68;
+
+		inline constexpr size_t kEndpointBytes = 0x2574;
+		inline constexpr uintptr_t kEndpointUdp = 0x004;
+		inline constexpr uintptr_t kEndpointSteamLow = 0x018;
+		inline constexpr uintptr_t kEndpointSteamHigh = 0x01C;
+		inline constexpr uintptr_t kEndpointQueue = 0x02C;
+		inline constexpr uintptr_t kEndpointRoundTrip = 0xA70;
+		inline constexpr uintptr_t kEndpointKbpsSent = 0xA7C;
+		inline constexpr uintptr_t kEndpointState = 0xA98;
+		inline constexpr uintptr_t kEndpointLocalBehind = 0xAA8;
+		inline constexpr uintptr_t kEndpointRemoteBehind = 0xAAC;
+		inline constexpr uintptr_t kEndpointPendingOutput = 0x15B8;
+
+		inline constexpr uint32_t kSteamIdIndividualHigh = 0x01100001;
+		inline constexpr int kMostPlayers = 4;
+		inline constexpr int kMostSpectators = 32;
+
+		inline constexpr uint32_t kStateSyncing = 0;
+		inline constexpr uint32_t kStateSynchronized = 1;
+		inline constexpr uint32_t kStateRunning = 2;
+		inline constexpr uint32_t kStateDisconnected = 3;
+	}
+
 	namespace Render
 	{
 		inline constexpr int kSceneWidth = 1280;
@@ -492,6 +529,9 @@ namespace GameOffsets
 		inline constexpr const char* kListAnchor = "./bg/BgList.txt";
 		inline constexpr const char* kRandomFilterAnchor = "RANDOMFILTER_MAX_OVER";
 		inline constexpr size_t kRecordBytes = 0x234;
+		inline constexpr uintptr_t kRecordSelectDisable = 0x60;
+		inline constexpr uintptr_t kRecordRandomDisable = 0x64;
+		inline constexpr uintptr_t kRecordVsDisable = 0x68;
 		inline constexpr size_t kCountStoreWindow = 0x20;
 		inline constexpr size_t kTinyFunction = 0x20;
 

@@ -1,7 +1,7 @@
 #include "Palette/PaletteControl.h"
 
 #include "Core/interfaces.h"
-#include "Network/SteamNetwork.h"
+#include "Network/NetLink.h"
 #include "Palette/PaletteOwner.h"
 #include "Training/GameState.h"
 
@@ -27,9 +27,9 @@ void PaletteControl::OnFrame()
 {
 	g_online = GameState::IsOnline();
 
-	const int side = g_online ? SteamNetwork::GetOwnSide() : -1;
+	const int side = g_online ? NetLink::OwnSide() : -1;
 
-	g_spectating = g_online && SteamNetwork::IsHooked() && side < 0;
+	g_spectating = g_online && NetLink::IsHooked() && side < 0;
 	g_local = side >= 0 && side < kSides ? side : -1;
 }
 

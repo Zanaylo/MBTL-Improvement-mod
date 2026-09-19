@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+
 namespace StageTable
 {
 	constexpr int kStockNumbers = 100;
@@ -10,6 +12,8 @@ namespace StageTable
 	bool Lifted();
 	int Numbers();
 	int ListEntries();
+
+	uintptr_t RecordAt(int number);
 
 	const char* StatusText();
 }

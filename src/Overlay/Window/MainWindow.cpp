@@ -6,6 +6,8 @@
 #include "Game/ModFiles.h"
 #include "Game/ModPacks.h"
 #include "Music/BgmControl.h"
+#include "Network/ModHandshake.h"
+#include "Network/NetLink.h"
 #include "Network/PaletteShare.h"
 #include "Overlay/ComboNav.h"
 #include "Overlay/FrameMeterHud.h"
@@ -20,6 +22,7 @@
 #include "Palette/PaletteOwner.h"
 #include "Stages/StageImport.h"
 #include "Stages/StageLibrary.h"
+#include "Stages/StageOnline.h"
 #include "Training/BattleHud.h"
 #include "Training/CharacterDraw.h"
 #include "Training/FrameStepper.h"
@@ -355,6 +358,16 @@ void MainWindow::DrawStagesSection()
 
 	UiText::Good("%d stage(s) installed.", StageLibrary::Count());
 	UiText::Muted("%s", StageImport::StatusText());
+
+	if (ImGui::Checkbox("Hold back added stages online", &g_settings.stageHoldBack))
+		Settings::SaveBool("Netplay", "HoldBackAddedStages", g_settings.stageHoldBack);
+
+	if (ImGui::IsItemHovered())
+		ImGui::SetTooltip("Online, stages the game does not ship with are taken out of the picker unless the other "
+			"side runs the mod with the same stages. Without this an opponent who lacks the stage crashes.");
+
+	if (StageOnline::AddedCount() > 0)
+		UiText::Muted("%s", StageOnline::StatusText());
 }
 
 void MainWindow::DrawMusicSection()
@@ -516,6 +529,27 @@ void MainWindow::DrawPaletteOptions()
 
 	if (PaletteControl::IsOnline())
 		UiText::Muted("%s", PaletteShare::GetStatusText());
+
+	if (!NetLink::InSession())
+		return;
+
+	UiText::Muted("%s", ModHandshake::StatusText());
+
+	const NetLink::Snapshot& link = NetLink::Current();
+
+	if (!link.hasPeer)
+		return;
+
+	if (!link.ggpoRead)
+	{
+		UiText::Muted("connection %s, the rollback layout of this game version could not be read",
+			NetLink::StateName(link.peer.state));
+		return;
+	}
+
+	UiText::Muted("connection %s%s, ping %d ms, %d kbps, frames behind %d/%d, pending %d",
+		NetLink::StateName(link.peer.state), link.synchronizing ? " (synchronizing)" : "", link.peer.ping,
+		link.peer.kbps, link.peer.localBehind, link.peer.remoteBehind, link.peer.pending);
 }
 
 void MainWindow::DrawPerformanceSection()

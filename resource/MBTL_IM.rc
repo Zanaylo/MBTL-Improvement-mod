@@ -32,3 +32,4 @@ END
 
 #include "shaderexamples.rc"
 #include "basepals.rc"
+#include "cards.rc"

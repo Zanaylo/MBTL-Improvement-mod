@@ -9,6 +9,8 @@ A mod for MELTY BLOOD: TYPE LUMINA with an in-game window, built on the same des
   FIGHTING CLIMAX IGNITION, or a stage folder of your own, unhide the stages the game hides, and an optional
   extension table of 127 stage numbers.
 - **Music** - every track, your own OGG music, and rules that swap one track for another.
+- **Online** - your palette reaches an opponent who also runs the mod, added stages are held back unless both
+  sides have the same ones, and a connection log you can send with a netplay report.
 - **Performance** - frame pacing fixes and frame time metrics.
 - **Config** and **Debug** windows.
 

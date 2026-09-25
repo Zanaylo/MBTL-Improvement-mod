@@ -20,6 +20,7 @@
 #include "Palette/PaletteControl.h"
 #include "Palette/PaletteLibrary.h"
 #include "Palette/PaletteOwner.h"
+#include "Performance/StageColor.h"
 #include "Stages/StageImport.h"
 #include "Stages/StageLibrary.h"
 #include "Stages/StageOnline.h"
@@ -40,6 +41,28 @@ constexpr float kOptionWidth = 160.0f;
 constexpr const char* kFrameMeter = "FrameMeter";
 constexpr const char* kPalette = "Palette";
 constexpr const char* kDefaultPalette = "Default";
+constexpr const char* kVideo = "Video";
+constexpr int kGreenScreen = 0x00FF00;
+constexpr int kColourChannels = 3;
+constexpr int kChannelBits = 8;
+constexpr int kChannelMask = 0xFF;
+constexpr float kChannelMax = 255.0f;
+
+void UnpackColour(int rgb, float* colour)
+{
+	for (int i = 0; i < kColourChannels; ++i)
+		colour[i] = ((rgb >> ((kColourChannels - 1 - i) * kChannelBits)) & kChannelMask) / kChannelMax;
+}
+
+int PackColour(const float* colour)
+{
+	int rgb = 0;
+
+	for (int i = 0; i < kColourChannels; ++i)
+		rgb = (rgb << kChannelBits) | static_cast<int>(colour[i] * kChannelMax + 0.5f);
+
+	return rgb;
+}
 
 void SavedCheckbox(const char* label, bool* value, const char* key, const char* tooltip)
 {
@@ -113,8 +136,61 @@ void MainWindow::DrawTrainingSection()
 	DrawCharacterControls();
 	ImGui::Spacing();
 	DrawFrameStepControls();
+	DrawExtras();
 	DrawHitboxTypes();
 	DrawFrameMeterOptions();
+}
+
+void MainWindow::DrawExtras()
+{
+	if (!ImGui::TreeNode("Extras"))
+		return;
+
+	DrawStageColourControls();
+	ImGui::TreePop();
+}
+
+void MainWindow::DrawStageColourControls()
+{
+	if (!StageColor::IsAvailable())
+	{
+		UiText::Warn("Flat colour stage: %s", StageColor::StatusText());
+		return;
+	}
+
+	if (ImGui::Checkbox("Flat colour stage", &g_settings.flatStage))
+	{
+		StageColor::Apply();
+		Settings::SaveBool(kVideo, "FlatStage", g_settings.flatStage);
+	}
+
+	if (ImGui::IsItemHovered())
+		ImGui::SetTooltip("Replaces the stage with a solid colour for chroma keying. Characters, effects and the HUD are "
+			"untouched.");
+
+	if (!g_settings.flatStage)
+		return;
+
+	float colour[kColourChannels] = {};
+	UnpackColour(g_settings.flatStageColour, colour);
+
+	if (ImGui::ColorEdit3("##stagecolour", colour, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel))
+	{
+		g_settings.flatStageColour = PackColour(colour);
+		StageColor::Apply();
+	}
+
+	if (ImGui::IsItemDeactivatedAfterEdit())
+		Settings::SaveInt(kVideo, "FlatStageColour", g_settings.flatStageColour);
+
+	ImGui::SameLine();
+
+	if (!ImGui::Button("Green"))
+		return;
+
+	g_settings.flatStageColour = kGreenScreen;
+	StageColor::Apply();
+	Settings::SaveInt(kVideo, "FlatStageColour", g_settings.flatStageColour);
 }
 
 void MainWindow::DrawFrameMeterControls()

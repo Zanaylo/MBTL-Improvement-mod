@@ -258,7 +258,7 @@ bool GraphicsPanel::DrawEverythingOff()
 	Settings::SaveBool(kGraphics, "PlainStage", false);
 	Settings::SaveBool(kGraphics, "SimpleStage", false);
 
-	StageColor::SetEnabled(false);
+	StageColor::Apply();
 	EngineQuality::Apply();
 	PotatoMode::Apply(PotatoMode::Level_Off);
 	Improvements::Apply(Improvements::Level_Off);

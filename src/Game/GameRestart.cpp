@@ -18,6 +18,7 @@ namespace {
 constexpr int kTitleFrames = 900;
 constexpr LONG kNoScene = -1;
 constexpr uint32_t kEntering = 1;
+constexpr uint32_t kReturning = 1;
 
 using SceneStep_t = int(__fastcall*)(int);
 
@@ -52,7 +53,12 @@ void RunEnter(const SceneAddresses& scenes)
 	if (scene == kNoScene)
 		return;
 
+	uint32_t* const countdown = reinterpret_cast<uint32_t*>(scenes.replayCountdown);
+	LOG("GameRestart: the replay check countdown stood at %u", *countdown);
+	*countdown = 0;
+
 	*reinterpret_cast<uint32_t*>(scenes.sceneId) = static_cast<uint32_t>(scene);
+	*reinterpret_cast<uint32_t*>(scenes.sceneReturn) = kReturning;
 	*reinterpret_cast<uint32_t*>(scenes.entering) = kEntering;
 
 	LOG("GameRestart: the game entered scene %ld", static_cast<long>(scene));

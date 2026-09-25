@@ -51,6 +51,32 @@ bool ReadTitleRun(const uint8_t* function, size_t length, size_t at, Store run[S
 		run[2].address == run[3].address + sizeof(uint32_t);
 }
 
+uintptr_t Winner(const std::map<uintptr_t, int>& votes, int least, int majority)
+{
+	int best = 0;
+	int second = 0;
+	uintptr_t winner = 0;
+
+	for (const std::pair<const uintptr_t, int>& vote : votes)
+	{
+		if (vote.second > best)
+		{
+			second = best;
+			best = vote.second;
+			winner = vote.first;
+			continue;
+		}
+
+		if (vote.second > second)
+			second = vote.second;
+	}
+
+	if (best < least || best < second * majority)
+		return 0;
+
+	return winner;
+}
+
 uintptr_t VoteForEntering(uintptr_t sceneId)
 {
 	uint8_t pattern[Scenes::kStoreAddressAt + sizeof(uint32_t)] = { Scenes::kStoreGlobal[0], Scenes::kStoreGlobal[1] };
@@ -77,26 +103,46 @@ uintptr_t VoteForEntering(uintptr_t sceneId)
 		}
 	}
 
-	int best = 0;
-	int second = 0;
-	uintptr_t winner = 0;
+	return Winner(votes, Scenes::kLeastEnteringVotes, Scenes::kEnteringMajority);
+}
 
-	for (const std::pair<const uintptr_t, int>& vote : votes)
+uintptr_t CountdownAt(const uint8_t* compare)
+{
+	const uint8_t* const load = compare - Scenes::kCountdownLength;
+
+	if (!ImageScanner::InCode(load, Scenes::kCountdownLength))
+		return 0;
+
+	if (load[0] != Scenes::kLoadEax || load[Scenes::kCountdownIncrementAt] != Scenes::kIncrementEax ||
+		load[Scenes::kCountdownStoreAt] != Scenes::kStoreEax)
 	{
-		if (vote.second > best)
-		{
-			second = best;
-			best = vote.second;
-			winner = vote.first;
-			continue;
-		}
-
-		if (vote.second > second)
-			second = vote.second;
+		return 0;
 	}
 
-	if (best < Scenes::kLeastEnteringVotes || best < second * Scenes::kEnteringMajority)
-		return 0;
+	const uintptr_t loaded = ImageScanner::ReadDword(load + 1);
+	const uintptr_t stored = ImageScanner::ReadDword(load + Scenes::kCountdownStoreAt + 1);
+
+	return loaded == stored && ImageScanner::InData(loaded) ? loaded : 0;
+}
+
+uintptr_t ResolveReplayCountdown()
+{
+	std::map<uintptr_t, int> votes;
+
+	for (const uint8_t* compare :
+		ImageScanner::FindBytes(ImageScanner::Code(), Scenes::kCountdownCompare, sizeof(Scenes::kCountdownCompare)))
+	{
+		const uintptr_t countdown = CountdownAt(compare);
+
+		if (countdown)
+			++votes[countdown];
+	}
+
+	const uintptr_t winner = Winner(votes, Scenes::kLeastCountdownVotes, Scenes::kCountdownMajority);
+
+	if (!winner)
+		LOG("SceneMap: the replay check countdown has %u candidate(s) and no clear winner",
+			static_cast<unsigned>(votes.size()));
 
 	return winner;
 }
@@ -240,13 +286,15 @@ bool SceneMap::Initialize()
 
 	ResolveTitle();
 	g_addresses.step = ResolveStep(g_addresses.sceneId);
+	g_addresses.replayCountdown = ResolveReplayCountdown();
 
 	Anchors::Record("Scene step", reinterpret_cast<uintptr_t>(g_addresses.step), "restart the game");
 	Anchors::Record("Scene manager", g_addresses.manager, "the scene this launch started on");
 	Anchors::Record("Scene entry flag", g_addresses.entering, "restart the game");
+	Anchors::Record("Replay check countdown", g_addresses.replayCountdown, "restart the game");
 
 	LOG("SceneMap: the title is scene %d, reached with flag %d", g_addresses.titleScene, g_addresses.titleFlag);
-	return g_addresses.step != nullptr && g_addresses.entering != 0;
+	return g_addresses.step != nullptr && g_addresses.entering != 0 && g_addresses.replayCountdown != 0;
 }
 
 const SceneAddresses& SceneMap::Addresses()

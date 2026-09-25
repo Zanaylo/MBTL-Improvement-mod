@@ -5,6 +5,7 @@
 #include "Core/info.h"
 #include "Core/interfaces.h"
 #include "Core/keycodes.h"
+#include "Game/ColourSlots.h"
 #include "Game/HiddenCharacters.h"
 #include "Overlay/UiScale.h"
 #include "Overlay/UiText.h"
@@ -182,6 +183,29 @@ void ConfigPanel::DrawRosterOptions()
 
 	if (g_settings.unlockHiddenCharacters)
 		UiText::Muted("%s", HiddenCharacters::StatusText());
+
+	DrawColourSlotOptions();
+}
+
+void ConfigPanel::DrawColourSlotOptions()
+{
+	ImGui::SeparatorText("Colours");
+
+	SaveBoolOnChange("Unlock unused colour slots", g_settings.unlockColourSlots, "Roster", "UnlockColourSlots");
+
+	if (ImGui::IsItemHovered())
+		ImGui::SetTooltip("Character select offers all 42 colour slots the game can address instead of the usual "
+			"stock ones. MBTL only ships artwork for the stock colours, so the extra slots repeat colour 1 until a "
+			"palette mod fills those pages. Made for palette makers, not for new colours on its own.");
+
+	if (!ColourSlots::IsAvailable())
+	{
+		UiText::Warn("%s", ColourSlots::StatusText());
+		return;
+	}
+
+	if (g_settings.unlockColourSlots)
+		UiText::Muted("%s", ColourSlots::StatusText());
 }
 
 void ConfigPanel::DrawKeybindsTab()

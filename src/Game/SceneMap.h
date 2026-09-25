@@ -10,6 +10,7 @@ struct SceneAddresses
 	uintptr_t sceneReturn = 0;
 	uintptr_t battleClear = 0;
 	uintptr_t entering = 0;
+	uintptr_t replayCountdown = 0;
 	int titleScene = -1;
 	int titleFlag = -1;
 };

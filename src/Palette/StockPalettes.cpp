@@ -40,11 +40,6 @@ std::string PathOf(int chara, int sub)
 	return path;
 }
 
-int LimitFor(int chara)
-{
-	return chara == Palette::kWideStockChara ? Palette::kWideStockLimit : Palette::kStockLimit;
-}
-
 int DistinctRows(const std::vector<uint8_t>& rows, int stored)
 {
 	int distinct = 1;
@@ -58,7 +53,7 @@ int DistinctRows(const std::vector<uint8_t>& rows, int stored)
 	return distinct;
 }
 
-bool Parse(const std::vector<uint8_t>& data, int limit, Sub& out)
+bool Parse(const std::vector<uint8_t>& data, int limit, Sub& out, size_t& outPages)
 {
 	if (data.size() < Palette::kFileHeader + Palette::kPageBytes)
 		return false;
@@ -68,6 +63,7 @@ bool Parse(const std::vector<uint8_t>& data, int limit, Sub& out)
 
 	out.rows.assign(data.begin() + Palette::kFileHeader, data.begin() + Palette::kFileHeader + keep * Palette::kPageBytes);
 	out.count = DistinctRows(out.rows, static_cast<int>(keep));
+	outPages = pages;
 	return true;
 }
 
@@ -97,9 +93,16 @@ bool StockPalettes::Load(int chara)
 	for (int sub = 0; sub < Palette::kSubPalettes; ++sub)
 	{
 		std::vector<uint8_t> data;
+		size_t pages = 0;
 
-		if (GameAssets::Read(PathOf(chara, sub).c_str(), data))
-			Parse(data, LimitFor(chara), character.subs[sub]);
+		if (!GameAssets::Read(PathOf(chara, sub).c_str(), data) ||
+			!Parse(data, Palette::kStockLimit, character.subs[sub], pages))
+		{
+			continue;
+		}
+
+		LOG("stock palettes: %s holds %u page(s), %d of them different",
+			PathOf(chara, sub).c_str(), static_cast<unsigned>(pages), character.subs[sub].count);
 	}
 
 	if (character.subs[0].count == 0)

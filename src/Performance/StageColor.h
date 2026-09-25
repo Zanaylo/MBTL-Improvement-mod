@@ -13,5 +13,7 @@ namespace StageColor
 	void SetColor(uint32_t rgb);
 	uint32_t GetClearColor();
 
+	void Apply();
+
 	const char* StatusText();
 }

@@ -172,6 +172,7 @@
     <ClCompile Include="src\Game\GameAssets.cpp" />
     <ClCompile Include="src\Game\GameAsserts.cpp" />
     <ClCompile Include="src\Game\GameRestart.cpp" />
+    <ClCompile Include="src\Game\ColourSlots.cpp" />
     <ClCompile Include="src\Game\HiddenCharacters.cpp" />
     <ClCompile Include="src\Game\MemoryMap.cpp" />
     <ClCompile Include="src\Game\ModFiles.cpp" />
@@ -398,6 +399,7 @@
     <ClInclude Include="src\Game\GameAsserts.h" />
     <ClInclude Include="src\Game\GameOffsets.h" />
     <ClInclude Include="src\Game\GameRestart.h" />
+    <ClInclude Include="src\Game\ColourSlots.h" />
     <ClInclude Include="src\Game\HiddenCharacters.h" />
     <ClInclude Include="src\Game\MemoryMap.h" />
     <ClInclude Include="src\Game\ModFiles.h" />

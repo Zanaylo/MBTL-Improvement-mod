@@ -264,6 +264,9 @@
     <ClCompile Include="src\Game\GameRestart.cpp">
       <Filter>Game</Filter>
     </ClCompile>
+    <ClCompile Include="src\Game\ColourSlots.cpp">
+      <Filter>Game</Filter>
+    </ClCompile>
     <ClCompile Include="src\Game\HiddenCharacters.cpp">
       <Filter>Game</Filter>
     </ClCompile>
@@ -933,6 +936,9 @@
       <Filter>Game</Filter>
     </ClInclude>
     <ClInclude Include="src\Game\GameRestart.h">
+      <Filter>Game</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Game\ColourSlots.h">
       <Filter>Game</Filter>
     </ClInclude>
     <ClInclude Include="src\Game\HiddenCharacters.h">

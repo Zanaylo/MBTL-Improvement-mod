@@ -98,8 +98,7 @@ void PerformanceModule::Install()
 	PotatoMode::ApplySaved();
 	EngineQuality::Apply();
 
-	StageColor::SetColor(0x000000u);
-	StageColor::SetEnabled(g_settings.simpleStage);
+	StageColor::Apply();
 
 	if (!Compat::SafeMode())
 		PumpWait::Install();

@@ -148,9 +148,7 @@ namespace GameOffsets
 		inline constexpr unsigned kTextureRows = 8;
 
 		inline constexpr size_t kFileHeader = 16;
-		inline constexpr int kStockLimit = 25;
-		inline constexpr int kWideStockChara = 19;
-		inline constexpr int kWideStockLimit = 33;
+		inline constexpr int kStockLimit = 42;
 	}
 
 	namespace SaveData
@@ -243,6 +241,16 @@ namespace GameOffsets
 		inline constexpr size_t kMostSceneCases = 300;
 
 		inline constexpr uintptr_t kSceneId = 0x08;
+
+		inline constexpr uint8_t kCountdownCompare[] = { 0x83, 0xF8, 0x1E };
+		inline constexpr uint8_t kLoadEax = 0xA1;
+		inline constexpr uint8_t kIncrementEax = 0x40;
+		inline constexpr uint8_t kStoreEax = 0xA3;
+		inline constexpr size_t kCountdownLength = 11;
+		inline constexpr size_t kCountdownIncrementAt = 5;
+		inline constexpr size_t kCountdownStoreAt = 6;
+		inline constexpr int kLeastCountdownVotes = 3;
+		inline constexpr int kCountdownMajority = 2;
 	}
 
 	namespace Draw
@@ -329,6 +337,36 @@ namespace GameOffsets
 		inline constexpr int32_t kEmptyCell = -1;
 	}
 
+	namespace Colours
+	{
+		inline constexpr int kCharas = 28;
+		inline constexpr int kMostCharas = 64;
+		inline constexpr int kSlots = 0x30;
+		inline constexpr int kPickerSlots = 42;
+		inline constexpr int kStockSlots = 25;
+		inline constexpr int kTableFirst = 0x0A;
+		inline constexpr uint8_t kNarrowRange = static_cast<uint8_t>(kStockSlots - 1 - kTableFirst);
+		inline constexpr uint8_t kWideRange = static_cast<uint8_t>(kPickerSlots - 1 - kTableFirst);
+		inline constexpr uint8_t kGranted = 1;
+
+		inline constexpr uint8_t kCompareEax[] = { 0x83, 0xF8 };
+		inline constexpr size_t kRangeAt = 2;
+		inline constexpr size_t kJumpAt = 3;
+		inline constexpr size_t kCompareLength = 4;
+		inline constexpr uint8_t kJumpAbove = 0x77;
+		inline constexpr uint8_t kLoadAddress = 0x8D;
+		inline constexpr size_t kLoadAddressLength = 3;
+
+		inline constexpr uint8_t kLoadByte = 0x8A;
+		inline constexpr uint8_t kModRmMask = 0xC0;
+		inline constexpr uint8_t kDisplaced = 0x80;
+		inline constexpr uint8_t kRegisterMask = 0x07;
+		inline constexpr uint8_t kScaledIndex = 0x04;
+		inline constexpr size_t kLoadByteLength = 3;
+		inline constexpr uint8_t kCompareEaxImmediate = 0x3D;
+		inline constexpr size_t kCompareImmediateLength = 5;
+	}
+
 	namespace Netplay
 	{
 		inline constexpr uint8_t kPushImmediate = 0x68;
@@ -405,14 +443,32 @@ namespace GameOffsets
 		inline constexpr uint8_t kGlobalCompare[] = { 0x83, 0x3D };
 		inline constexpr size_t kGlobalCompareLength = 7;
 		inline constexpr int kGateCompares = 3;
-		inline constexpr uint8_t kReturnTrue[] = { 0xB0, 0x01, 0x5D, 0xC3 };
-		inline constexpr size_t kGateMaxLength = 0x40;
+		inline constexpr size_t kGateWindow = 0x80;
+		inline constexpr uint8_t kSkipBranch[] = { 0x84, 0xC0, 0x0F, 0x84 };
+		inline constexpr size_t kSkipTestLength = 2;
+		inline constexpr size_t kSkipBranchLength = 6;
+		inline constexpr size_t kSkipOpcodeLength = 2;
+		inline constexpr uint8_t kSkipAlways[] = { 0x90, 0xE9 };
 
-		inline constexpr uint8_t kByteGetterHead[] = { 0x55, 0x8B, 0xEC, 0xA0 };
-		inline constexpr size_t kByteGetterTailAt = 8;
-		inline constexpr uint8_t kByteGetterTail[] = { 0x5D, 0xC3 };
-		inline constexpr size_t kByteGetterLength = 10;
-		inline constexpr uint8_t kStretchRectCall[] = { 0x8B, 0x82, 0x88, 0x00, 0x00, 0x00, 0xFF, 0xD0 };
+		inline constexpr uint8_t kCompareByteGlobal[] = { 0x80, 0x3D };
+		inline constexpr size_t kCompareByteLength = 7;
+
+		inline constexpr uint8_t kCallMemory = 0xFF;
+		inline constexpr uint8_t kCallDisp32First = 0x90;
+		inline constexpr uint8_t kCallDisp32Last = 0x97;
+		inline constexpr uint8_t kStretchRectSlot[] = { 0x88, 0x00, 0x00, 0x00 };
+		inline constexpr size_t kStretchRectLength = 6;
+		inline constexpr uint8_t kPushGlobal[] = { 0xFF, 0x35 };
+		inline constexpr size_t kPushWindow = 0x20;
+
+		inline constexpr uint8_t kLoadSamples[] = { 0x8B, 0x9E };
+		inline constexpr size_t kLoadSamplesLength = 6;
+		inline constexpr uint8_t kTestSamples[] = { 0x85, 0xDB, 0x74 };
+		inline constexpr size_t kTestSamplesWindow = 8;
+		inline constexpr uint8_t kStoreSamples[] = { 0x89, 0x1D };
+		inline constexpr size_t kStoreSamplesLength = 6;
+		inline constexpr uintptr_t kSurfaceFields = 0x20;
+		inline constexpr uint8_t kNoSamples[] = { 0x33, 0xDB, 0x90, 0x90, 0x90, 0x90 };
 	}
 
 	namespace Input

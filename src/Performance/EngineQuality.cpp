@@ -3,14 +3,21 @@
 #include "Core/interfaces.h"
 #include "Core/logger.h"
 #include "Core/utils.h"
+#include "Game/GameOffsets.h"
+#include "Hooks/CodePatch.h"
 #include "Performance/RenderMap.h"
 
+#include <cstring>
+
 namespace {
+
+namespace Render = GameOffsets::Render;
 
 constexpr int kPollInterval = 60;
 constexpr uint8_t kOff = 0;
 
-uint8_t g_userMultisample = 1;
+uint8_t g_originalRead[Render::kLoadSamplesLength] = {};
+bool g_readSaved = false;
 uint8_t g_userFxaa = 0;
 bool g_forcing = false;
 int g_framesUntilPoll = 0;
@@ -31,23 +38,36 @@ bool WriteByte(uintptr_t address, uint8_t value)
 	return (ReadByte(address, current) && current == value) || TryWrite(address, value);
 }
 
+bool PatchSampleRead(bool plain)
+{
+	uint8_t* const read = RenderMap::Addresses().stageSampleRead;
+
+	if (!read)
+		return false;
+
+	if (!g_readSaved)
+	{
+		std::memcpy(g_originalRead, read, sizeof(g_originalRead));
+		g_readSaved = true;
+	}
+
+	const uint8_t* const wanted = plain ? Render::kNoSamples : g_originalRead;
+
+	if (std::memcmp(read, wanted, sizeof(g_originalRead)) == 0)
+		return true;
+
+	return CodePatch::Write(read, wanted, sizeof(g_originalRead));
+}
+
 void FollowUserValues()
 {
-	const RenderAddresses& addresses = RenderMap::Addresses();
-
-	ReadByte(addresses.stageMultisample, g_userMultisample);
-	ReadByte(addresses.stageFxaa, g_userFxaa);
+	ReadByte(RenderMap::Addresses().stageFxaa, g_userFxaa);
 }
 
 bool HoldOff()
 {
-	const RenderAddresses& addresses = RenderMap::Addresses();
-	const bool multisample = WriteByte(addresses.stageMultisample, kOff);
-
-	if (addresses.stageFxaa != 0)
-		WriteByte(addresses.stageFxaa, kOff);
-
-	return multisample;
+	WriteByte(RenderMap::Addresses().stageFxaa, kOff);
+	return PatchSampleRead(true);
 }
 
 void SetStatus(const char* status)
@@ -64,10 +84,8 @@ void Restore()
 		return;
 	}
 
-	const RenderAddresses& addresses = RenderMap::Addresses();
-
-	WriteByte(addresses.stageMultisample, g_userMultisample);
-	WriteByte(addresses.stageFxaa, g_userFxaa);
+	PatchSampleRead(false);
+	WriteByte(RenderMap::Addresses().stageFxaa, g_userFxaa);
 	g_forcing = false;
 
 	SetStatus("stage multisampling and FXAA restored");
@@ -77,7 +95,7 @@ void Restore()
 
 bool EngineQuality::IsAvailable()
 {
-	return RenderMap::Addresses().stageMultisample != 0;
+	return RenderMap::Addresses().stageSampleRead != nullptr;
 }
 
 const char* EngineQuality::LeverName()
@@ -92,12 +110,13 @@ bool EngineQuality::WantsStageEffects()
 
 bool EngineQuality::ReadStageEffects(bool& outEnabled)
 {
-	uint8_t value = 0;
+	const uintptr_t samples = RenderMap::Addresses().stageSamples;
+	uint32_t value = 0;
 
-	if (!ReadByte(RenderMap::Addresses().stageMultisample, value))
+	if (samples == 0 || !TryRead(samples, value))
 		return false;
 
-	outEnabled = value != kOff;
+	outEnabled = value != 0;
 	return true;
 }
 
@@ -127,7 +146,7 @@ void EngineQuality::Apply()
 	}
 
 	g_forcing = true;
-	SetStatus("stage multisampling and FXAA kept off");
+	SetStatus("stage multisampling and FXAA kept off. Multisampling changes on the next stage load");
 }
 
 void EngineQuality::OnFrame()

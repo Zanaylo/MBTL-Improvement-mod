@@ -744,8 +744,7 @@ bool PerformanceWindow::DrawEmptyStage()
 
 	if (changed)
 	{
-		StageColor::SetColor(0x000000u);
-		StageColor::SetEnabled(g_settings.simpleStage);
+		StageColor::Apply();
 		Settings::SaveBool(kGraphics, "SimpleStage", g_settings.simpleStage);
 	}
 

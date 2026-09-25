@@ -14,6 +14,7 @@ private:
 	void DrawOverlayOptions();
 	void DrawStepOptions();
 	void DrawRosterOptions();
+	void DrawColourSlotOptions();
 	void DrawKeybindsTab();
 	void DrawFunctionRow();
 	void DrawBindRow(Hotkeys::Action action);

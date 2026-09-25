@@ -23,6 +23,8 @@ private:
 	void DrawCharacterControls();
 	void DrawHitboxTypes();
 	void DrawFrameStepControls();
+	void DrawExtras();
+	void DrawStageColourControls();
 	void DrawFrameMeterControls();
 	void DrawFrameMeterOptions();
 	void DrawStagesSection();

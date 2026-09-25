@@ -13,6 +13,7 @@
 #include "Game/CharacterIndexGuard.h"
 #include "Game/GameAsserts.h"
 #include "Game/GameRestart.h"
+#include "Game/ColourSlots.h"
 #include "Game/HiddenCharacters.h"
 #include "Game/MemoryMap.h"
 #include "Game/ModFiles.h"
@@ -193,6 +194,7 @@ void Install()
 	RunStage("performance", PerformanceModule::Install);
 	RunStage("palettes", PaletteModule::Install);
 	RunStage("hidden characters", HiddenCharacters::Install);
+	RunStage("colour slots", ColourSlots::Install);
 	RunStage("save data guard", SaveDataGuard::Install);
 	RunStage("character index guard", CharacterIndexGuard::Install);
 	RunStage("game asserts", GameAsserts::Install);

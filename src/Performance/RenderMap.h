@@ -4,8 +4,9 @@
 
 struct RenderAddresses
 {
-	uint8_t* stageGate = nullptr;
-	uintptr_t stageMultisample = 0;
+	uint8_t* stageSkip = nullptr;
+	uint8_t* stageSampleRead = nullptr;
+	uintptr_t stageSamples = 0;
 	uintptr_t stageFxaa = 0;
 };
 

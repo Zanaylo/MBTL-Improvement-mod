@@ -539,7 +539,6 @@ constexpr StageImage kUnlitImages[] = {
 };
 
 constexpr const char* kStageFolderPrefix = "bg\\bg";
-constexpr const char* kLightingFolder = "bg\\bg65535";
 constexpr uint32_t kLitVersion = 1;
 constexpr uint32_t kUnlitVersion = 2;
 
@@ -554,7 +553,8 @@ const StageImage* MatchSuffix(const StageImage* first, const StageImage* last, c
 	return nullptr;
 }
 
-const StageImage* StageImageFor(const std::string& key)
+template <size_t Count>
+const StageImage* StageFolderImage(const StageImage (&images)[Count], const std::string& key)
 {
 	const size_t prefix = strlen(kStageFolderPrefix);
 
@@ -569,17 +569,17 @@ const StageImage* StageImageFor(const std::string& key)
 	if (at == prefix)
 		return nullptr;
 
-	return MatchSuffix(std::begin(kStageImages), std::end(kStageImages), key, at);
+	return MatchSuffix(std::begin(images), std::end(images), key, at);
+}
+
+const StageImage* StageImageFor(const std::string& key)
+{
+	return StageFolderImage(kStageImages, key);
 }
 
 const StageImage* UnlitImageFor(const std::string& key)
 {
-	const size_t prefix = strlen(kLightingFolder);
-
-	if (key.compare(0, prefix, kLightingFolder) != 0)
-		return nullptr;
-
-	return MatchSuffix(std::begin(kUnlitImages), std::end(kUnlitImages), key, prefix);
+	return StageFolderImage(kUnlitImages, key);
 }
 
 class StageColourOverlay : public IFileOverlay

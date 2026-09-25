@@ -289,16 +289,38 @@ namespace GameOffsets
 
 	namespace Light
 	{
-		inline constexpr const char* kBankAnchor = "bank Over MAX_BG_CHARA_COLOR_INFO_NUM!!!";
-		inline constexpr int kLeastBuilderCalls = 3;
-		inline constexpr uint8_t kFourArgumentCleanup[] = { 0x83, 0xC4, 0x10 };
-		inline constexpr uint8_t kThreeArgumentCleanup[] = { 0x83, 0xC4, 0x0C };
-		inline constexpr size_t kPairGetters = 2;
-		inline constexpr size_t kSingleGetters = 1;
+		inline constexpr const char* kColourImage = "stage_color.img";
+		inline constexpr const char* kSpecularImage = "stage_specular.img";
+		inline constexpr const char* kBokashiImage = "stage_bokashi_alpha.img";
+
+		inline constexpr uint8_t kPushImmediate = 0x68;
+		inline constexpr size_t kPushLength = 5;
+		inline constexpr uint8_t kCall = 0xE8;
+		inline constexpr uint8_t kLea = 0x8D;
+		inline constexpr uint8_t kLeaEaxDisp32Mask = 0xC7;
+		inline constexpr uint8_t kLeaEaxDisp32 = 0x80;
+		inline constexpr uint8_t kLeaEcx = 0x88;
+		inline constexpr size_t kLeaLength = 6;
+		inline constexpr int kRegisterShift = 3;
+		inline constexpr uint8_t kRegisterMask = 7;
+		inline constexpr int kRegisters = 8;
+		inline constexpr uint8_t kMov = 0x8B;
+		inline constexpr uint8_t kMovEcxFirst = 0xC8;
+		inline constexpr uint8_t kMovEcxLast = 0xCF;
+
+		inline constexpr uint8_t kPushByte = 0x6A;
+		inline constexpr uint8_t kBankStride = 0x20;
+		inline constexpr size_t kVectorPushes = 12;
+		inline constexpr size_t kCtorPushAt = 5;
+		inline constexpr size_t kCountPushAt = 10;
+		inline constexpr uint8_t kSetVtable[] = { 0xC7, 0x41, 0x04 };
+		inline constexpr uintptr_t kImageOffset = 4;
+		inline constexpr size_t kReaderSlot = 1;
+
 		inline constexpr int kColourChannels = 3;
 		inline constexpr int kFullPercent = 100;
-		inline constexpr float kWhite = 1.0f;
-		inline constexpr float kNone = 0.0f;
+		inline constexpr int kWhite = 255;
+		inline constexpr int kNone = 0;
 	}
 
 	namespace Cockpit

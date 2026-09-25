@@ -8,27 +8,39 @@
 #include "Hooks/ImageScanner.h"
 
 #include <algorithm>
-#include <map>
+#include <cstring>
 #include <vector>
 
 namespace {
 
 namespace Light = GameOffsets::Light;
 
-using ColourGetter_t = int(__cdecl*)(int, int, float*, float*);
-using AlphaGetter_t = int(__cdecl*)(int, int, float*);
+using PixelReader_t = int(__fastcall*)(void*, void*, int, int, int*, int*, int*, int*);
 
-struct Getters
+struct Image
 {
-	uint8_t* colour;
-	uint8_t* specular;
-	uint8_t* bokashi;
+	const char* name;
+	int target;
 };
 
-ColourGetter_t oColour = nullptr;
-ColourGetter_t oSpecular = nullptr;
-AlphaGetter_t oBokashi = nullptr;
+constexpr Image kImages[] = {
+	{ Light::kColourImage, Light::kWhite },
+	{ Light::kSpecularImage, Light::kNone },
+	{ Light::kBokashiImage, Light::kNone },
+};
 
+constexpr size_t kImageCount = sizeof(kImages) / sizeof(kImages[0]);
+
+struct Bank
+{
+	uintptr_t first = 0;
+	uintptr_t end = 0;
+	int target = 0;
+	uint8_t* reader = nullptr;
+};
+
+PixelReader_t oReader = nullptr;
+Bank g_banks[kImageCount];
 bool g_hooked = false;
 const char* g_status = "not found in this game version";
 
@@ -37,123 +49,174 @@ int Percent()
 	return std::clamp(g_settings.lightStrength, 0, Light::kFullPercent);
 }
 
-float Strength()
+const Bank* BankOf(const void* image)
 {
-	return static_cast<float>(Percent()) / Light::kFullPercent;
-}
+	const uintptr_t at = reinterpret_cast<uintptr_t>(image) - Light::kImageOffset;
 
-void Blend(float* values, int count, float target, float strength)
-{
-	if (values == nullptr)
-		return;
-
-	for (int i = 0; i < count; ++i)
-		values[i] = target + (values[i] - target) * strength;
-}
-
-int __cdecl HookedColour(int bank, int x, float* base, float* height)
-{
-	const int result = oColour(bank, x, base, height);
-
-	if (Percent() == Light::kFullPercent)
-		return result;
-
-	const float strength = Strength();
-	Blend(base, Light::kColourChannels, Light::kWhite, strength);
-	Blend(height, Light::kColourChannels, Light::kNone, strength);
-	return result;
-}
-
-int __cdecl HookedSpecular(int bank, int x, float* base, float* height)
-{
-	const int result = oSpecular(bank, x, base, height);
-
-	if (Percent() == Light::kFullPercent)
-		return result;
-
-	const float strength = Strength();
-	Blend(base, Light::kColourChannels, Light::kNone, strength);
-	Blend(height, Light::kColourChannels, Light::kNone, strength);
-	return result;
-}
-
-int __cdecl HookedBokashi(int bank, int x, float* alpha)
-{
-	const int result = oBokashi(bank, x, alpha);
-
-	if (Percent() != Light::kFullPercent)
-		Blend(alpha, 1, Light::kNone, Strength());
-
-	return result;
-}
-
-uint8_t* BuilderOf(const std::vector<uint8_t*>& getters)
-{
-	std::map<uint8_t*, int> counts;
-
-	for (uint8_t* getter : getters)
+	for (const Bank& bank : g_banks)
 	{
-		for (uint8_t* caller : ImageScanner::CallerFunctions(getter))
-			++counts[caller];
+		if (at >= bank.first && at < bank.end && (at - bank.first) % Light::kBankStride == 0)
+			return &bank;
 	}
 
-	uint8_t* best = nullptr;
-	int bestCount = 0;
-	bool tied = false;
-
-	for (const std::pair<uint8_t* const, int>& entry : counts)
-	{
-		tied = tied || entry.second == bestCount;
-
-		if (entry.second <= bestCount)
-			continue;
-
-		best = entry.first;
-		bestCount = entry.second;
-		tied = false;
-	}
-
-	if (best != nullptr && !tied && bestCount >= Light::kLeastBuilderCalls)
-		return best;
-
-	LOG("CharacterLight: no single function builds the draw context (%d getter call(s) at most)", bestCount);
 	return nullptr;
 }
 
-std::vector<uint8_t*> Among(const std::vector<uint8_t*>& calls, const std::vector<uint8_t*>& getters)
+void Blend(int* value, int target, int percent)
 {
-	std::vector<uint8_t*> kept;
-
-	for (uint8_t* call : calls)
-	{
-		if (std::find(getters.begin(), getters.end(), call) != getters.end())
-			kept.push_back(call);
-	}
-
-	return kept;
+	if (value != nullptr)
+		*value = target + (*value - target) * percent / Light::kFullPercent;
 }
 
-bool Resolve(Getters& out)
+int __fastcall HookedReader(void* image, void* edx, int x, int y, int* r, int* g, int* b, int* a)
 {
-	const std::vector<uint8_t*> getters = ImageScanner::FunctionsReferencing(ImageScanner::FindString(Light::kBankAnchor));
-	const uint8_t* const builder = BuilderOf(getters);
+	const int result = oReader(image, edx, x, y, r, g, b, a);
+	const int percent = Percent();
 
-	if (!builder)
-		return false;
+	if (percent == Light::kFullPercent)
+		return result;
 
-	const std::vector<uint8_t*> pairs = Among(ImageScanner::CallsCleanedBy(builder, Light::kFourArgumentCleanup,
-		sizeof(Light::kFourArgumentCleanup)), getters);
-	const std::vector<uint8_t*> singles = Among(ImageScanner::CallsCleanedBy(builder, Light::kThreeArgumentCleanup,
-		sizeof(Light::kThreeArgumentCleanup)), getters);
+	const Bank* const bank = BankOf(image);
 
-	if (pairs.size() != Light::kPairGetters || singles.size() != Light::kSingleGetters)
+	if (!bank)
+		return result;
+
+	Blend(r, bank->target, percent);
+	Blend(g, bank->target, percent);
+	Blend(b, bank->target, percent);
+	return result;
+}
+
+std::vector<uint8_t*> Users(const char* name)
+{
+	return ImageScanner::FunctionsReferencing(ImageScanner::FindString(name));
+}
+
+uint8_t* ResolveLoader()
+{
+	std::vector<uint8_t*> common = Users(kImages[0].name);
+
+	for (size_t i = 1; i < kImageCount; ++i)
 	{
-		LOG("CharacterLight: the draw context builder calls %u colour and %u alpha getter(s), expected 2 and 1",
-			static_cast<unsigned>(pairs.size()), static_cast<unsigned>(singles.size()));
-		return false;
+		const std::vector<uint8_t*> users = Users(kImages[i].name);
+
+		common.erase(std::remove_if(common.begin(), common.end(), [&users](uint8_t* function) {
+			return std::find(users.begin(), users.end(), function) == users.end();
+		}), common.end());
 	}
 
-	out = { pairs[0], pairs[1], singles[0] };
+	if (common.size() == 1)
+		return common.front();
+
+	LOG("CharacterLight: the stage light loader has %u candidate(s), expected exactly one",
+		static_cast<unsigned>(common.size()));
+	return nullptr;
+}
+
+size_t PushOf(const uint8_t* loader, size_t length, const char* name)
+{
+	const std::vector<uint8_t*> strings = ImageScanner::FindString(name);
+
+	for (size_t i = 0; i + Light::kPushLength <= length; ++i)
+	{
+		if (loader[i] != Light::kPushImmediate)
+			continue;
+
+		const auto pushed = reinterpret_cast<uint8_t*>(ImageScanner::ReadDword(loader + i + 1));
+
+		if (std::find(strings.begin(), strings.end(), pushed) != strings.end())
+			return i;
+	}
+
+	return length;
+}
+
+uintptr_t BankLoadedAfter(const uint8_t* loader, size_t length, size_t push, const uintptr_t* registers)
+{
+	uintptr_t ecx = 0;
+
+	for (size_t at = push + Light::kPushLength; at + Light::kLeaLength <= length && loader[at] != Light::kCall; ++at)
+	{
+		if (loader[at] == Light::kLea && loader[at + 1] == Light::kLeaEcx)
+			ecx = ImageScanner::ReadDword(loader + at + 2);
+
+		if (loader[at] == Light::kMov && loader[at + 1] >= Light::kMovEcxFirst && loader[at + 1] <= Light::kMovEcxLast)
+			ecx = registers[loader[at + 1] & Light::kRegisterMask];
+	}
+
+	return ImageScanner::InData(ecx) ? ecx : 0;
+}
+
+bool DescribeBank(uintptr_t first, Bank& out)
+{
+	const uint8_t pattern[] = { Light::kPushByte, Light::kBankStride, Light::kPushImmediate,
+		static_cast<uint8_t>(first), static_cast<uint8_t>(first >> 8), static_cast<uint8_t>(first >> 16),
+		static_cast<uint8_t>(first >> 24) };
+	int matches = 0;
+
+	for (const uint8_t* site : ImageScanner::FindBytes(ImageScanner::Code(), pattern, sizeof(pattern)))
+	{
+		const uint8_t* const head = site - Light::kVectorPushes;
+
+		if (!ImageScanner::InCode(head, Light::kVectorPushes) || head[0] != Light::kPushImmediate ||
+			head[Light::kCtorPushAt] != Light::kPushImmediate || head[Light::kCountPushAt] != Light::kPushByte)
+		{
+			continue;
+		}
+
+		const auto ctor = reinterpret_cast<const uint8_t*>(ImageScanner::ReadDword(head + Light::kCtorPushAt + 1));
+
+		if (!ImageScanner::InCode(ctor, sizeof(Light::kSetVtable) + sizeof(uint32_t)) ||
+			std::memcmp(ctor, Light::kSetVtable, sizeof(Light::kSetVtable)) != 0)
+		{
+			continue;
+		}
+
+		const auto vtable = reinterpret_cast<const uint8_t*>(ImageScanner::ReadDword(ctor + sizeof(Light::kSetVtable)));
+		out.first = first;
+		out.end = first + static_cast<uintptr_t>(head[Light::kCountPushAt + 1]) * Light::kBankStride;
+		out.reader = reinterpret_cast<uint8_t*>(ImageScanner::ReadDword(vtable + Light::kReaderSlot * sizeof(uint32_t)));
+		++matches;
+	}
+
+	return matches == 1 && ImageScanner::InCode(out.reader, 1);
+}
+
+bool Resolve()
+{
+	uint8_t* const loader = ResolveLoader();
+
+	if (!loader)
+		return false;
+
+	const size_t length = ImageScanner::FunctionLength(loader);
+	uintptr_t registers[Light::kRegisters] = {};
+
+	for (size_t i = 0; i + Light::kLeaLength <= length; ++i)
+	{
+		if (loader[i] == Light::kLea && (loader[i + 1] & Light::kLeaEaxDisp32Mask) == Light::kLeaEaxDisp32)
+			registers[(loader[i + 1] >> Light::kRegisterShift) & Light::kRegisterMask] = ImageScanner::ReadDword(loader + i + 2);
+	}
+
+	for (size_t i = 0; i < kImageCount; ++i)
+	{
+		const uintptr_t first = BankLoadedAfter(loader, length, PushOf(loader, length, kImages[i].name), registers);
+
+		if (!first || !DescribeBank(first, g_banks[i]))
+		{
+			LOG("CharacterLight: the %s bank was not found", kImages[i].name);
+			return false;
+		}
+
+		g_banks[i].target = kImages[i].target;
+
+		if (g_banks[i].reader != g_banks[0].reader)
+		{
+			LOG("CharacterLight: the light banks do not share one pixel reader");
+			return false;
+		}
+	}
+
 	return true;
 }
 
@@ -161,12 +224,12 @@ bool Resolve(Getters& out)
 
 void CharacterLight::Install()
 {
-	Getters getters = {};
-	const bool resolved = Resolve(getters);
+	const bool resolved = Resolve();
 
-	Anchors::Record("Character colour getter", reinterpret_cast<uintptr_t>(getters.colour), "character light");
-	Anchors::Record("Character specular getter", reinterpret_cast<uintptr_t>(getters.specular), "character light");
-	Anchors::Record("Character bokashi getter", reinterpret_cast<uintptr_t>(getters.bokashi), "character light");
+	Anchors::Record("Character colour bank", g_banks[0].first, "character light");
+	Anchors::Record("Character specular bank", g_banks[1].first, "character light");
+	Anchors::Record("Character bokashi bank", g_banks[2].first, "character light");
+	Anchors::Record("Stage light pixel reader", reinterpret_cast<uintptr_t>(g_banks[0].reader), "character light");
 
 	if (!resolved)
 	{
@@ -174,12 +237,8 @@ void CharacterLight::Install()
 		return;
 	}
 
-	g_hooked = HookManager::CreateHook(getters.colour, reinterpret_cast<void*>(&HookedColour),
-		reinterpret_cast<void**>(&oColour), "character colour getter") &&
-		HookManager::CreateHook(getters.specular, reinterpret_cast<void*>(&HookedSpecular),
-			reinterpret_cast<void**>(&oSpecular), "character specular getter") &&
-		HookManager::CreateHook(getters.bokashi, reinterpret_cast<void*>(&HookedBokashi),
-			reinterpret_cast<void**>(&oBokashi), "character bokashi getter");
+	g_hooked = HookManager::CreateHook(g_banks[0].reader, reinterpret_cast<void*>(&HookedReader),
+		reinterpret_cast<void**>(&oReader), "stage light pixel reader");
 
 	g_status = g_hooked ? "" : "could not be turned on";
 	LOG("CharacterLight: %s", g_hooked ? "ready" : g_status);

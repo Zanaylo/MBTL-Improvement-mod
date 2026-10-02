@@ -61,10 +61,15 @@ namespace GameOffsets
 		inline constexpr int kLeastSessionTicks = 2;
 
 		inline constexpr const char* kPauseAnchor = "PLAYER %d PAUSE";
-		inline constexpr uint8_t kLoadEcxImmediate = 0xB9;
-		inline constexpr int kPauseLeastLoads = 10;
-		inline constexpr int kPauseMajority = 2;
+		inline constexpr uint8_t kCompareGlobal[] = { 0x83, 0x3D };
+		inline constexpr size_t kCompareValueAt = 6;
+		inline constexpr uint8_t kStoreGlobal[] = { 0xC7, 0x05 };
+		inline constexpr size_t kStoreGlobalLength = 10;
+		inline constexpr size_t kStoreValueAt = 6;
+		inline constexpr size_t kGlobalAt = 2;
+		inline constexpr uint32_t kPauseRequested = 1;
 		inline constexpr uintptr_t kPauseState = 0x00;
+		inline constexpr uintptr_t kPauseRequest = 0x04;
 	}
 
 	namespace Objects
@@ -190,10 +195,6 @@ namespace GameOffsets
 		inline constexpr uint8_t kJumpBelow = 0x72;
 		inline constexpr uint8_t kJumpLess = 0x7C;
 
-		inline constexpr uint8_t kMoveEax = 0xB8;
-		inline constexpr size_t kJumpOpcodeAt = 5;
-		inline constexpr uint8_t kJump = 0xE9;
-		inline constexpr size_t kPatchLength = 10;
 		inline constexpr uint8_t kFill = 0xCC;
 		inline constexpr size_t kEntryWindow = 0x60;
 
@@ -391,20 +392,12 @@ namespace GameOffsets
 
 	namespace Netplay
 	{
-		inline constexpr uint8_t kPushImmediate = 0x68;
-		inline constexpr uint8_t kImulFrame = 0x6B;
-		inline constexpr uint8_t kImulFrameModRm = 0x85;
-		inline constexpr uint8_t kImulFrameModRmMask = 0xC7;
-		inline constexpr size_t kImulFrameLength = 7;
-
-		inline constexpr uint8_t kPlayerRecordBytes = 0x30;
 		inline constexpr uintptr_t kPlayerType = 0x04;
 		inline constexpr uintptr_t kPlayerNumber = 0x08;
 		inline constexpr int32_t kPlayerLocal = 0;
-		inline constexpr int kArgPlayers = 1;
-		inline constexpr int kArgRecords = 2;
-		inline constexpr int kArgSteamIds = 6;
-		inline constexpr int kMostPlayers = 4;
+		inline constexpr int32_t kPlayerRemote = 1;
+		inline constexpr int32_t kFirstNumber = 1;
+		inline constexpr int32_t kSides = 2;
 
 		inline constexpr const char* kSteamLibrary = "steam_api.dll";
 		inline constexpr int kMostAttempts = 20;
@@ -426,6 +419,8 @@ namespace GameOffsets
 		inline constexpr uintptr_t kLocatorSignature = 0;
 		inline constexpr uintptr_t kLocatorOffset = 4;
 		inline constexpr uintptr_t kVTableFromLocator = 4;
+		inline constexpr size_t kAddPlayerSlot = 2;
+		inline constexpr uint16_t kAddPlayerStackBytes = 0x0C;
 
 		inline constexpr uintptr_t kPlayerEndpoints = 0xBD8;
 		inline constexpr uintptr_t kSpectatorEndpoints = 0xBDC;

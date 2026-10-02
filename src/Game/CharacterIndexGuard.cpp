@@ -52,18 +52,16 @@ std::vector<uint8_t*> UnlockedColourGetters(const std::vector<AssertSite>& sites
 	return getters;
 }
 
-bool Patch(const AssertSite& site, const uint8_t* exit, uint32_t result)
+size_t BuildReturn(const AssertSite& site, const uint8_t* function, uint32_t result, uint8_t* bytes)
 {
-	uint8_t bytes[Asserts::kLongestBlock];
-	std::memset(bytes, Asserts::kFill, sizeof(bytes));
+	if (!function || static_cast<size_t>(site.block - function) > Asserts::kEntryWindow ||
+		site.length > Asserts::kLongestBlock)
+	{
+		return 0;
+	}
 
-	const auto distance = static_cast<int32_t>(exit - (site.block + Asserts::kPatchLength));
-	bytes[0] = Asserts::kMoveEax;
-	std::memcpy(bytes + 1, &result, sizeof(result));
-	bytes[Asserts::kJumpOpcodeAt] = Asserts::kJump;
-	std::memcpy(bytes + Asserts::kJumpOpcodeAt + 1, &distance, sizeof(distance));
-
-	return CodePatch::Write(site.block, bytes, site.length);
+	std::memset(bytes, Asserts::kFill, Asserts::kLongestBlock);
+	return ImageScanner::EarlyReturn(function, site.block - Asserts::kCheckLength, result, bytes, site.length);
 }
 
 bool Guard(const AssertSite& site, const std::vector<uint8_t*>& colourGetters)
@@ -72,19 +70,17 @@ bool Guard(const AssertSite& site, const std::vector<uint8_t*>& colourGetters)
 	AssertSites::Describe(site.file, site.line, place, sizeof(place));
 
 	uint8_t* const function = ImageScanner::FunctionStart(site.block);
-	const uint8_t* const exit = function ? ImageScanner::Epilogue(function) : nullptr;
+	const bool unlocked = std::find(colourGetters.begin(), colourGetters.end(), function) != colourGetters.end();
+	const uint32_t result = unlocked ? 1 : 0;
+	uint8_t bytes[Asserts::kLongestBlock];
 
-	if (!exit || static_cast<size_t>(site.block - function) > Asserts::kEntryWindow ||
-		site.length < Asserts::kPatchLength || site.length > Asserts::kLongestBlock)
+	if (BuildReturn(site, function, result, bytes) == 0)
 	{
 		LOG("CharacterIndexGuard: %s is not a plain entry check, left alone", place);
 		return false;
 	}
 
-	const bool unlocked = std::find(colourGetters.begin(), colourGetters.end(), function) != colourGetters.end();
-	const uint32_t result = unlocked ? 1 : 0;
-
-	if (!Patch(site, exit, result))
+	if (!CodePatch::Write(site.block, bytes, site.length))
 	{
 		LOG("CharacterIndexGuard: %s could not be patched", place);
 		return false;

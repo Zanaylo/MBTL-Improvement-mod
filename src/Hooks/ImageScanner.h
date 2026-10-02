@@ -49,6 +49,6 @@ namespace ImageScanner
 	bool Contains(const uint8_t* start, size_t length, const uint8_t* bytes, size_t count);
 	const uint8_t* AfterPushOf(const uint8_t* function, size_t length, const uint8_t* value);
 	bool ReturnsWith(const uint8_t* function, uint16_t stackBytes);
-	uint8_t* Epilogue(uint8_t* function);
+	size_t EarlyReturn(const uint8_t* function, const uint8_t* from, uint32_t result, uint8_t* out, size_t capacity);
 	bool CallsImport(const uint8_t* function, const char* library, const char* name);
 }

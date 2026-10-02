@@ -19,6 +19,7 @@ namespace GgpoLayout
 	bool IsResolved();
 
 	bool IsPlayerBackend(uintptr_t backend);
+	uint8_t* AddPlayerFunction();
 
 	int PlayerCount(uintptr_t backend);
 	int SpectatorCount(uintptr_t backend);

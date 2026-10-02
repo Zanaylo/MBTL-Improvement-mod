@@ -378,6 +378,41 @@ uintptr_t ResolveSession(const std::vector<uint8_t*>& ticks)
 	return OnlyValue(sessions, "the online session");
 }
 
+struct PauseFields
+{
+	std::set<uintptr_t> compared;
+	std::set<uintptr_t> requested;
+};
+
+PauseFields PauseFieldsOf(const uint8_t* function)
+{
+	PauseFields fields;
+	const size_t length = ImageScanner::FunctionLength(function);
+
+	for (size_t i = 0; i + Battle::kStoreGlobalLength <= length; ++i)
+	{
+		const uint8_t* const at = function + i;
+		const uintptr_t global = ImageScanner::ReadDword(at + Battle::kGlobalAt);
+
+		if (!ImageScanner::InData(global))
+			continue;
+
+		if (std::memcmp(at, Battle::kCompareGlobal, sizeof(Battle::kCompareGlobal)) == 0 &&
+			at[Battle::kCompareValueAt] == 0)
+		{
+			fields.compared.insert(global);
+		}
+
+		if (std::memcmp(at, Battle::kStoreGlobal, sizeof(Battle::kStoreGlobal)) == 0 &&
+			ImageScanner::ReadDword(at + Battle::kStoreValueAt) == Battle::kPauseRequested)
+		{
+			fields.requested.insert(global);
+		}
+	}
+
+	return fields;
+}
+
 uintptr_t ResolvePause()
 {
 	const uint8_t* const printer = Only(ImageScanner::FunctionsReferencing(ImageScanner::FindString(Battle::kPauseAnchor)),
@@ -386,47 +421,22 @@ uintptr_t ResolvePause()
 	if (!printer)
 		return 0;
 
-	std::map<uintptr_t, int> counts;
+	std::set<uintptr_t> states;
 
 	for (uint8_t* caller : ImageScanner::CallerFunctions(printer))
 	{
-		const size_t length = ImageScanner::FunctionLength(caller);
+		const PauseFields fields = PauseFieldsOf(caller);
 
-		for (size_t i = 0; i + 1 + sizeof(uint32_t) <= length; ++i)
+		for (uintptr_t request : fields.requested)
 		{
-			if (caller[i] != Battle::kLoadEcxImmediate)
-				continue;
+			const uintptr_t state = request - Battle::kPauseRequest;
 
-			const uintptr_t object = ImageScanner::ReadDword(caller + i + 1);
-
-			if (ImageScanner::InData(object))
-				++counts[object];
+			if (fields.compared.count(state) != 0)
+				states.insert(state);
 		}
 	}
 
-	int best = 0;
-	int second = 0;
-	uintptr_t winner = 0;
-
-	for (const std::pair<const uintptr_t, int>& entry : counts)
-	{
-		if (entry.second > best)
-		{
-			second = best;
-			best = entry.second;
-			winner = entry.first;
-			continue;
-		}
-
-		if (entry.second > second)
-			second = entry.second;
-	}
-
-	if (best >= Battle::kPauseLeastLoads && best >= second * Battle::kPauseMajority)
-		return winner;
-
-	LOG("BattleMap: the pause controller loads no object often enough (%d)", best);
-	return 0;
+	return OnlyValue(states, "the pause state");
 }
 
 }

@@ -4,15 +4,11 @@
 #include "Game/Anchors.h"
 #include "Game/GameOffsets.h"
 #include "Hooks/HookManager.h"
-#include "Hooks/ImageScanner.h"
 #include "Network/GgpoLayout.h"
 #include "Network/LobbyWatch.h"
 #include "Network/NetLog.h"
 #include "Network/SteamLink.h"
 #include "Training/BattleMap.h"
-
-#include <cstring>
-#include <set>
 
 namespace {
 
@@ -25,112 +21,70 @@ NetLink::Snapshot g_now = {};
 NetLink::Snapshot g_shared = {};
 SRWLOCK g_lock = SRWLOCK_INIT;
 
-void* oStartPlayers = nullptr;
+using AddPlayer_t = int(__fastcall*)(void*, void*, const uint8_t*, void*, const uint64_t*);
+
+AddPlayer_t oAddPlayer = nullptr;
 bool g_hooked = false;
 
 volatile LONG g_side = -1;
 volatile LONG64 g_peer = 0;
 
-void __cdecl NoteStart(const uint32_t* args)
+void LogMatchWhenKnown()
 {
-	const int players = static_cast<int>(args[Netplay::kArgPlayers]);
-	const uintptr_t records = args[Netplay::kArgRecords];
-	const uintptr_t ids = args[Netplay::kArgSteamIds];
+	const LONG side = g_side;
+	const LONG64 peer = g_peer;
 
-	if (players <= 0 || players > Netplay::kMostPlayers || records == 0 || ids == 0)
+	if (side < 0 || peer == 0)
 		return;
-
-	int local = -1;
-	int remote = -1;
-	int32_t number = 0;
-
-	for (int i = 0; i < players; ++i)
-	{
-		int32_t type = -1;
-		const uintptr_t record = records + i * Netplay::kPlayerRecordBytes;
-
-		if (!TryRead(record + Netplay::kPlayerType, type))
-			return;
-
-		if (type == Netplay::kPlayerLocal && local < 0)
-		{
-			local = i;
-			TryRead(record + Netplay::kPlayerNumber, number);
-			continue;
-		}
-
-		if (remote < 0)
-			remote = i;
-	}
-
-	uint64_t peer = 0;
-
-	if (local < 0 || remote < 0 ||
-		!TryReadMemory(&peer, reinterpret_cast<const void*>(ids + remote * sizeof(peer)), sizeof(peer)))
-	{
-		return;
-	}
-
-	const LONG side = number >= 1 && number <= 2 ? number - 1 : local;
-
-	InterlockedExchange(&g_side, side);
-	InterlockedExchange64(&g_peer, static_cast<LONG64>(peer));
 
 	NetLog::Write("ggpo match started with this machine as p%d and %llu across", static_cast<int>(side) + 1,
 		static_cast<unsigned long long>(peer));
 }
 
-__declspec(naked) void HookedStartPlayers()
+void NoteLocal(int32_t number)
 {
-	__asm
-	{
-		pushad
-		lea eax, [esp + 36]
-		push eax
-		call NoteStart
-		add esp, 4
-		popad
-		jmp dword ptr [oStartPlayers]
-	}
+	if (number < Netplay::kFirstNumber || number > Netplay::kSides)
+		return;
+
+	InterlockedExchange(&g_side, number - Netplay::kFirstNumber);
+	LogMatchWhenKnown();
 }
 
-bool WalksPlayerRecords(const uint8_t* function)
+void NoteRemote(const uint64_t* steamId)
 {
-	const size_t length = ImageScanner::FunctionLength(function);
+	uint64_t peer = 0;
 
-	for (size_t i = 0; i + Netplay::kImulFrameLength <= length; ++i)
-	{
-		if (function[i] == Netplay::kImulFrame &&
-			(function[i + 1] & Netplay::kImulFrameModRmMask) == Netplay::kImulFrameModRm &&
-			function[i + Netplay::kImulFrameLength - 1] == Netplay::kPlayerRecordBytes)
-		{
-			return true;
-		}
-	}
+	if (steamId == nullptr || !TryReadMemory(&peer, steamId, sizeof(peer)) || peer == 0)
+		return;
 
-	return false;
+	InterlockedExchange64(&g_peer, static_cast<LONG64>(peer));
+	LogMatchWhenKnown();
 }
 
-uint8_t* FindStartPlayers(uintptr_t session)
+void NotePlayer(const uint8_t* player, const uint64_t* steamId)
 {
-	uint8_t pattern[5] = { Netplay::kPushImmediate };
-	std::memcpy(pattern + 1, &session, sizeof(uint32_t));
+	const auto record = reinterpret_cast<uintptr_t>(player);
+	int32_t type = -1;
+	int32_t number = 0;
 
-	std::set<uint8_t*> found;
+	if (player == nullptr || !TryRead(record + Netplay::kPlayerType, type))
+		return;
 
-	for (uint8_t* site : ImageScanner::FindBytes(ImageScanner::Code(), pattern, sizeof(pattern)))
+	if (type == Netplay::kPlayerRemote)
 	{
-		uint8_t* const start = ImageScanner::FunctionStart(site);
-
-		if (start != nullptr && WalksPlayerRecords(start))
-			found.insert(start);
+		NoteRemote(steamId);
+		return;
 	}
 
-	if (found.size() == 1)
-		return *found.begin();
+	if (type == Netplay::kPlayerLocal && TryRead(record + Netplay::kPlayerNumber, number))
+		NoteLocal(number);
+}
 
-	NetLog::Write("ggpo player start has %u candidate(s), expected exactly one", static_cast<unsigned>(found.size()));
-	return nullptr;
+int __fastcall HookedAddPlayer(void* backend, void* unused, const uint8_t* player, void* handle,
+	const uint64_t* steamId)
+{
+	NotePlayer(player, steamId);
+	return oAddPlayer(backend, unused, player, handle, steamId);
 }
 
 uint32_t StateOf(const SteamLink::Sample& sample)
@@ -293,18 +247,15 @@ void LogLobby(const NetLink::Snapshot& before, const NetLink::Snapshot& after)
 
 bool NetLink::Install()
 {
-	GgpoLayout::Resolve();
+	uint8_t* const addPlayer = GgpoLayout::AddPlayerFunction();
 
-	const uintptr_t session = BattleMap::Addresses().session;
-	uint8_t* const start = session != 0 ? FindStartPlayers(session) : nullptr;
+	Anchors::Record("GGPO add player", reinterpret_cast<uintptr_t>(addPlayer), "online link");
 
-	Anchors::Record("GGPO player start", reinterpret_cast<uintptr_t>(start), "online link");
-
-	if (start == nullptr)
+	if (addPlayer == nullptr)
 		return false;
 
-	g_hooked = HookManager::CreateHook(start, reinterpret_cast<void*>(&HookedStartPlayers), &oStartPlayers,
-		"GGPO player start");
+	g_hooked = HookManager::CreateHook(addPlayer, reinterpret_cast<void*>(&HookedAddPlayer),
+		reinterpret_cast<void**>(&oAddPlayer), "GGPO add player");
 
 	return g_hooked;
 }

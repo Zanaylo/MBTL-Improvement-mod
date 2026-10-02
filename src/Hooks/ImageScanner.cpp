@@ -12,7 +12,6 @@ namespace {
 constexpr size_t kMaxFunctionWalk = 0x4000;
 constexpr size_t kMaxFunctionBody = 0x10000;
 constexpr size_t kFunctionAlignment = 16;
-constexpr uint8_t kPushEbp = 0x55;
 constexpr uint8_t kMovEbpEsp[] = { 0x8B, 0xEC };
 constexpr uint8_t kInt3 = 0xCC;
 constexpr uint8_t kRet = 0xC3;
@@ -41,17 +40,30 @@ constexpr uint8_t kGetterTail[] = { 0x5D, 0xC3 };
 constexpr size_t kBareGetterLength = 6;
 constexpr size_t kFramedGetterLength = 10;
 constexpr size_t kPrologueLength = 3;
-constexpr size_t kSmallestFramedFunction = 16;
-constexpr uint8_t kSehFrame[] = { 0x6A, 0xFF };
-constexpr uint8_t kPushEcx = 0x51;
-constexpr uint8_t kSubEspByte[] = { 0x83, 0xEC };
-constexpr size_t kSubEspByteLength = 3;
-constexpr uint8_t kSubEspDword[] = { 0x81, 0xEC };
-constexpr size_t kSubEspDwordLength = 6;
+constexpr uint8_t kPushRegister = 0x50;
+constexpr uint8_t kPopRegister = 0x58;
+constexpr uint8_t kOpcodeRegisterMask = 0xF8;
+constexpr uint8_t kRegisterMask = 0x07;
+constexpr int kRegisterShift = 3;
+constexpr int kModShift = 6;
+constexpr uint8_t kStackRegister = 4;
+constexpr uint8_t kFrameRegister = 5;
+constexpr uint8_t kModNoDisplacement = 0;
+constexpr uint8_t kModDisp8 = 1;
+constexpr uint8_t kModDisp32 = 2;
+constexpr uint8_t kModRegister = 3;
+constexpr uint8_t kSibFollows = 4;
+constexpr uint8_t kMovRegister = 0x8B;
+constexpr size_t kOpcodeLength = 1;
 constexpr uint8_t kMovEspEbp[] = { 0x8B, 0xE5 };
-constexpr uint8_t kPopEbp = 0x5D;
-constexpr uint8_t kSavedPushes[] = { 0x53, 0x56, 0x57 };
-constexpr uint8_t kSavedPops[] = { 0x5B, 0x5E, 0x5F };
+constexpr uint8_t kSubEspByte[] = { 0x83, 0xEC };
+constexpr uint8_t kAddEspByte[] = { 0x83, 0xC4 };
+constexpr size_t kEspByteLength = 3;
+constexpr uint8_t kSubEspDword[] = { 0x81, 0xEC };
+constexpr uint8_t kAddEspDword[] = { 0x81, 0xC4 };
+constexpr size_t kEspDwordLength = 6;
+constexpr size_t kMovEaxImmLength = 5;
+constexpr size_t kMostEntrySteps = 8;
 
 uint8_t* g_base = nullptr;
 ImageSection g_code;
@@ -86,11 +98,6 @@ void AddUnique(std::vector<uint8_t*>& list, uint8_t* value)
 {
 	if (std::find(list.begin(), list.end(), value) == list.end())
 		list.push_back(value);
-}
-
-bool IsPrologue(const uint8_t* at)
-{
-	return at[0] == kPushEbp && at[1] == kMovEbpEsp[0] && at[2] == kMovEbpEsp[1];
 }
 
 bool FollowsBoundary(const uint8_t* at)
@@ -201,42 +208,116 @@ uintptr_t GetterWith(const uint8_t* function, uint8_t opcode)
 	return ImageScanner::ReadDword(function + kPrologueLength + 1);
 }
 
-bool IsOneOf(uint8_t value, const uint8_t* values, size_t count)
+struct EntryStep
 {
-	return std::find(values, values + count, value) != values + count;
-}
-
-struct Frame
-{
-	bool locals = false;
-	size_t saved = 0;
+	uint8_t undo[kEspDwordLength] = {};
+	size_t undoLength = 0;
+	size_t length = 0;
 };
 
-Frame FrameOf(const uint8_t* function)
+size_t ModRmLength(const uint8_t* modRm)
 {
-	Frame frame;
-	size_t cursor = kPrologueLength;
+	const auto mod = static_cast<uint8_t>(modRm[0] >> kModShift);
+	const auto rm = static_cast<uint8_t>(modRm[0] & kRegisterMask);
 
-	if (function[cursor] == kPushEcx)
+	if (mod == kModRegister)
+		return sizeof(uint8_t);
+
+	const bool sib = rm == kSibFollows;
+	const size_t addressing = sizeof(uint8_t) + (sib ? sizeof(uint8_t) : 0);
+
+	if (mod == kModDisp8)
+		return addressing + sizeof(uint8_t);
+	if (mod == kModDisp32)
+		return addressing + sizeof(uint32_t);
+
+	const auto memoryBase = static_cast<uint8_t>(sib ? modRm[1] & kRegisterMask : rm);
+	return mod == kModNoDisplacement && memoryBase == kFrameRegister ? addressing + sizeof(uint32_t) : addressing;
+}
+
+EntryStep Undone(const uint8_t* undo, size_t undoLength, size_t length)
+{
+	EntryStep step;
+	std::memcpy(step.undo, undo, undoLength);
+	step.undoLength = undoLength;
+	step.length = length;
+	return step;
+}
+
+EntryStep ReadEntryStep(const uint8_t* at)
+{
+	const auto pushed = static_cast<uint8_t>(at[0] & kRegisterMask);
+
+	if ((at[0] & kOpcodeRegisterMask) == kPushRegister && pushed != kStackRegister)
 	{
-		frame.locals = true;
-		cursor += sizeof(kPushEcx);
-	}
-	else if (std::memcmp(function + cursor, kSubEspByte, sizeof(kSubEspByte)) == 0)
-	{
-		frame.locals = true;
-		cursor += kSubEspByteLength;
-	}
-	else if (std::memcmp(function + cursor, kSubEspDword, sizeof(kSubEspDword)) == 0)
-	{
-		frame.locals = true;
-		cursor += kSubEspDwordLength;
+		const auto pop = static_cast<uint8_t>(kPopRegister | pushed);
+		return Undone(&pop, sizeof(pop), kOpcodeLength);
 	}
 
-	while (IsOneOf(function[cursor + frame.saved], kSavedPushes, sizeof(kSavedPushes)))
-		++frame.saved;
+	if (std::memcmp(at, kMovEbpEsp, sizeof(kMovEbpEsp)) == 0)
+		return Undone(kMovEspEbp, sizeof(kMovEspEbp), sizeof(kMovEbpEsp));
 
-	return frame;
+	if (std::memcmp(at, kSubEspByte, sizeof(kSubEspByte)) == 0)
+	{
+		const uint8_t add[kEspByteLength] = { kAddEspByte[0], kAddEspByte[1], at[sizeof(kSubEspByte)] };
+		return Undone(add, sizeof(add), kEspByteLength);
+	}
+
+	if (std::memcmp(at, kSubEspDword, sizeof(kSubEspDword)) == 0)
+	{
+		uint8_t add[kEspDwordLength] = { kAddEspDword[0], kAddEspDword[1] };
+		std::memcpy(add + sizeof(kAddEspDword), at + sizeof(kSubEspDword), sizeof(uint32_t));
+		return Undone(add, sizeof(add), kEspDwordLength);
+	}
+
+	EntryStep neutral;
+	const auto target = static_cast<uint8_t>((at[1] >> kRegisterShift) & kRegisterMask);
+
+	if (at[0] == kMovRegister && target != kStackRegister && target != kFrameRegister)
+		neutral.length = kOpcodeLength + ModRmLength(at + 1);
+
+	return neutral;
+}
+
+size_t ReadEntry(const uint8_t* function, const uint8_t* from, EntryStep* steps)
+{
+	size_t count = 0;
+	const uint8_t* at = function;
+
+	while (at < from)
+	{
+		const EntryStep step = ReadEntryStep(at);
+
+		if (step.length == 0 || (step.undoLength != 0 && count == kMostEntrySteps))
+			return 0;
+
+		if (step.undoLength != 0)
+			steps[count++] = step;
+
+		at += step.length;
+	}
+
+	return at == from ? count : 0;
+}
+
+bool UndoesBefore(const uint8_t* function, size_t length, size_t tail, const EntryStep& first)
+{
+	return length >= tail + first.undoLength &&
+		std::memcmp(function + length - tail - first.undoLength, first.undo, first.undoLength) == 0;
+}
+
+size_t FinalReturnLength(const uint8_t* function, size_t length, const EntryStep& first)
+{
+	if (length >= kRetImmLength && function[length - kRetImmLength] == kRetImm &&
+		UndoesBefore(function, length, kRetImmLength, first))
+	{
+		return kRetImmLength;
+	}
+
+	if (function[length - 1] == kRet && UndoesBefore(function, length, sizeof(kRet), first))
+		return sizeof(kRet);
+
+	return 0;
 }
 
 uint8_t* AddressIn(uint32_t value)
@@ -636,40 +717,43 @@ bool ImageScanner::ReturnsWith(const uint8_t* function, uint16_t stackBytes)
 	return popped == stackBytes;
 }
 
-uint8_t* ImageScanner::Epilogue(uint8_t* function)
+size_t ImageScanner::EarlyReturn(const uint8_t* function, const uint8_t* from, uint32_t result, uint8_t* out,
+	size_t capacity)
 {
 	const size_t length = FunctionLength(function);
 
-	if (length < kSmallestFramedFunction || !IsPrologue(function) ||
-		std::memcmp(function + kPrologueLength, kSehFrame, sizeof(kSehFrame)) == 0)
+	if (length == 0 || from < function || from >= function + length)
+		return 0;
+
+	EntryStep steps[kMostEntrySteps];
+	const size_t count = ReadEntry(function, from, steps);
+
+	if (count == 0)
+		return 0;
+
+	const size_t returnLength = FinalReturnLength(function, length, steps[0]);
+	size_t needed = kMovEaxImmLength + returnLength;
+
+	for (size_t i = 0; i < count; ++i)
+		needed += steps[i].undoLength;
+
+	if (returnLength == 0 || needed > capacity)
+		return 0;
+
+	size_t written = 0;
+
+	for (size_t i = count; i-- > 0;)
 	{
-		return nullptr;
+		std::memcpy(out + written, steps[i].undo, steps[i].undoLength);
+		written += steps[i].undoLength;
 	}
 
-	const size_t ret = function[length - kRetImmLength] == kRetImm ? length - kRetImmLength : length - 1;
+	out[written] = kMovEaxImm;
+	std::memcpy(out + written + sizeof(kMovEaxImm), &result, sizeof(result));
+	written += kMovEaxImmLength;
 
-	if ((function[ret] != kRet && function[ret] != kRetImm) || function[ret - 1] != kPopEbp)
-		return nullptr;
-
-	size_t exit = ret - 1;
-	const bool restoresStack =
-		std::memcmp(function + exit - sizeof(kMovEspEbp), kMovEspEbp, sizeof(kMovEspEbp)) == 0;
-
-	if (restoresStack)
-		exit -= sizeof(kMovEspEbp);
-
-	const Frame frame = FrameOf(function);
-
-	if (frame.locals && !restoresStack)
-		return nullptr;
-
-	for (size_t i = 0; i < frame.saved; ++i, --exit)
-	{
-		if (!IsOneOf(function[exit - 1], kSavedPops, sizeof(kSavedPops)))
-			return nullptr;
-	}
-
-	return function + exit;
+	std::memcpy(out + written, function + length - returnLength, returnLength);
+	return written + returnLength;
 }
 
 bool ImageScanner::CallsImport(const uint8_t* function, const char* library, const char* name)

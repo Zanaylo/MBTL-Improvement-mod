@@ -143,6 +143,20 @@ bool GgpoLayout::IsPlayerBackend(uintptr_t backend)
 	return TryRead(backend, table) && table == g_backendVTable;
 }
 
+uint8_t* GgpoLayout::AddPlayerFunction()
+{
+	if (!Resolve())
+		return nullptr;
+
+	const auto slot = reinterpret_cast<const uint8_t*>(g_backendVTable + Ggpo::kAddPlayerSlot * sizeof(uint32_t));
+	auto* const function = reinterpret_cast<uint8_t*>(static_cast<uintptr_t>(ImageScanner::ReadDword(slot)));
+
+	if (!ImageScanner::InCode(function, 1) || !ImageScanner::ReturnsWith(function, Ggpo::kAddPlayerStackBytes))
+		return nullptr;
+
+	return function;
+}
+
 int GgpoLayout::PlayerCount(uintptr_t backend)
 {
 	const uintptr_t count = Field(backend, Ggpo::kPlayerCount);
